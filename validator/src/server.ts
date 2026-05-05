@@ -30,10 +30,28 @@ app.all("/verify", async (c) => {
     }
   }
 
-  const buildRedirect = () => {
+  // Decide if the request is a top-level page navigation (browser will
+  // follow our 302 to the login page) vs an XHR/asset fetch (where a 302
+  // chain would loop and the browser will explode with ERR_TOO_MANY_REDIRECTS).
+  // Heuristic: only navigations have Sec-Fetch-Mode=navigate AND request
+  // text/html. Anything else gets a clean 401.
+  const isNavigation = (() => {
+    const mode = c.req.header("sec-fetch-mode") || "";
+    if (mode === "navigate") return true;
+    const accept = c.req.header("accept") || "";
+    const dest = c.req.header("sec-fetch-dest") || "";
+    return accept.includes("text/html") && (dest === "document" || dest === "");
+  })();
+
+  const buildResponse = () => {
+    if (!isNavigation) return c.text("unauthorized", 401);
     const xfHost = c.req.header("x-forwarded-host") || "";
     const xfProto = c.req.header("x-forwarded-proto") || "https";
     const xfUri = c.req.header("x-forwarded-uri") || "/";
+    // If the original URI is already pointing at the login page, don't wrap
+    // it again — that's the loop the user just hit. Send to LOGIN_URL bare.
+    const isLoginPath = xfUri.startsWith("/auth") || xfUri.startsWith("/logout");
+    if (isLoginPath) return c.redirect(LOGIN_URL, 302);
     const rd = xfHost ? `${xfProto}://${xfHost}${xfUri}` : "";
     const url = rd ? `${LOGIN_URL}/?rd=${encodeURIComponent(rd)}` : LOGIN_URL;
     return c.redirect(url, 302);
@@ -43,9 +61,9 @@ app.all("/verify", async (c) => {
     console.error("LOGIN_URL and SUPABASE_JWT_SECRET must both be set");
     return c.text("misconfigured", 500);
   }
-  if (!token) return buildRedirect();
+  if (!token) return buildResponse();
   const result = await verifyJwt(token, SECRET);
-  if (!result.ok) return buildRedirect();
+  if (!result.ok) return buildResponse();
 
   c.header("X-User-Id", String(result.claims.sub ?? ""));
   c.header("X-User-Email", String(result.claims.email ?? ""));

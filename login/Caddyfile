@@ -1,9 +1,10 @@
 :80 {
   encode gzip zstd
 
-  # /logout — pure HTTP redirect that clears the auth cookie and bounces
-  # the browser back to the protected app with a cachebuster. Three
-  # Set-Cookie variants cover every plausible attribute combo.
+  # /logout — pure HTTP redirect with explicit cookie expiration headers.
+  # The login page detects the `_logged_out=1` cachebuster on its next load
+  # and clears localStorage there (since we can't clear localStorage from
+  # an HTTP response).
   @logout path /logout
   handle @logout {
     header +Set-Cookie "sb-access-token=; Path=/; Max-Age=0; Secure; SameSite=Lax"
@@ -13,10 +14,8 @@
     redir {$LOGOUT_REDIRECT}?_logged_out=1 302
   }
 
-  # /auth/* — strip the prefix so Caddy serves the SPA from /srv as if it
-  # were the document root. The Vite build's `base: "/auth/"` means asset
-  # URLs already include /auth, so the browser never needs the prefix
-  # stripped at the client side.
+  # /auth/* — SPA. Caddy strips the prefix internally; the Vite build's
+  # `base: "/auth/"` keeps asset URLs prefixed for the browser.
   @auth path /auth /auth/*
   handle @auth {
     uri strip_prefix /auth

@@ -19,6 +19,26 @@ function stashRd() {
     try { sessionStorage.setItem("auth-gateway-rd", rd); } catch { /* ignore */ }
   }
 }
+
+// Detect a logout flow and nuke localStorage before supabase-js tries to
+// rehydrate a session from it. The `_logged_out=1` flag is set by Caddy's
+// /logout response (cachebuster on the redirect target). The flag may
+// arrive either directly in the URL or embedded inside the rd param.
+function clearOnLogout() {
+  const search = window.location.search;
+  const rd = new URLSearchParams(search).get("rd") || "";
+  const isLogout = search.includes("_logged_out=1") || rd.includes("_logged_out=1");
+  if (!isLogout) return;
+  try { localStorage.clear(); } catch { /* ignore */ }
+  try { sessionStorage.clear(); } catch { /* ignore */ }
+  // Also drop the JWT cookie at every plausible scope, in case the HTTP
+  // Set-Cookie expirations missed an attribute combo.
+  ["", "; Domain=" + window.location.hostname, "; Domain=." + window.location.hostname.replace(/^[^.]+\./, "")].forEach((d) => {
+    document.cookie = "sb-access-token=; Path=/; Max-Age=0; SameSite=Lax; Secure" + d;
+  });
+}
+
+clearOnLogout();
 stashRd();
 
 function getRedirect(): string {

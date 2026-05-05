@@ -39,9 +39,14 @@ describe("/verify", () => {
     expect(res.headers.get("X-User-Email")).toBe("j@k.com");
   });
 
-  test("returns 302 to LOGIN_URL when no cookie is present", async () => {
+  test("returns 302 to LOGIN_URL on a navigation when no cookie is present", async () => {
     const res = await app.request("/verify", {
-      headers: { "X-Forwarded-Host": "app.example.com", "X-Forwarded-Uri": "/" },
+      headers: {
+        "X-Forwarded-Host": "app.example.com",
+        "X-Forwarded-Uri": "/",
+        "Sec-Fetch-Mode": "navigate",
+        "Accept": "text/html",
+      },
     });
     expect(res.status).toBe(302);
     const loc = res.headers.get("Location") || "";
@@ -49,11 +54,42 @@ describe("/verify", () => {
     expect(decodeURIComponent(loc.split("rd=")[1])).toBe("https://app.example.com/");
   });
 
-  test("returns 302 when cookie is present but token is invalid", async () => {
+  test("returns 401 (NOT 302) on an XHR/asset request without a cookie", async () => {
+    // This is what prevents the manifest.json/favicon redirect-loop.
     const res = await app.request("/verify", {
-      headers: { Cookie: "sb-access-token=garbage" },
+      headers: {
+        "X-Forwarded-Host": "app.example.com",
+        "X-Forwarded-Uri": "/favicon/manifest.json",
+        "Sec-Fetch-Mode": "no-cors",
+        "Sec-Fetch-Dest": "manifest",
+        "Accept": "*/*",
+      },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test("returns 302 when cookie is present but token is invalid (navigation)", async () => {
+    const res = await app.request("/verify", {
+      headers: {
+        Cookie: "sb-access-token=garbage",
+        "Sec-Fetch-Mode": "navigate",
+        "Accept": "text/html",
+      },
     });
     expect(res.status).toBe(302);
+  });
+
+  test("does not nest rd when the original URI is already /auth/...", async () => {
+    const res = await app.request("/verify", {
+      headers: {
+        "X-Forwarded-Host": "app.example.com",
+        "X-Forwarded-Uri": "/auth/?rd=https%3A%2F%2Fapp.example.com%2F",
+        "Sec-Fetch-Mode": "navigate",
+        "Accept": "text/html",
+      },
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("https://auth.example.com");
   });
 });
 
