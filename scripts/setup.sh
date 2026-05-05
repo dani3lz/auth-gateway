@@ -303,7 +303,7 @@ ok "validator image ready"
 
 VAL_UUID="$(service_uuid_by_name auth-validator || true)"
 if [ -z "$VAL_UUID" ]; then
-  export AUTH_VERIFY_HOST AUTH_HOST SUPABASE_JWT_SECRET="$JWT_SECRET"
+  export AUTH_VERIFY_HOST SB_HOST SUPABASE_JWT_SECRET="$JWT_SECRET"
   COMPOSE_B64="$(render "$REPO_DIR/compose/auth-validator.compose.yml" | b64)"
   resp=$(curl -s -X POST "${AUTH[@]}" "$API/services" -d @- <<JSON
 { "project_uuid":"$PROJECT_UUID","server_uuid":"$SERVER_UUID","environment_name":"production",

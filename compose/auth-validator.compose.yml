@@ -10,7 +10,9 @@ services:
     environment:
       - SERVICE_FQDN_VALIDATOR_8080=https://${AUTH_VERIFY_HOST}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
-      - LOGIN_URL=https://${AUTH_HOST}
+      # Path-based deployment: login UI lives at SB_HOST/auth, not on a
+      # separate subdomain. The validator's 302 sends users there.
+      - LOGIN_URL=https://${SB_HOST}/auth
       - COOKIE_NAME=sb-access-token
       - PORT=8080
     expose:

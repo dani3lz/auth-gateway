@@ -14,28 +14,28 @@ services:
       timeout: 3s
       retries: 3
     labels:
-      - traefik.enable=true
-      - 'traefik.http.routers.auth-login-https.rule=Host(`${SB_HOST}`) && PathPrefix(`/auth`)'
-      - traefik.http.routers.auth-login-https.entrypoints=https
-      - traefik.http.routers.auth-login-https.tls=true
-      - traefik.http.routers.auth-login-https.tls.certresolver=letsencrypt
-      - traefik.http.routers.auth-login-https.priority=200
-      - traefik.http.routers.auth-login-https.service=auth-login-svc
-      - 'traefik.http.routers.auth-login-http.rule=Host(`${SB_HOST}`) && PathPrefix(`/auth`)'
-      - traefik.http.routers.auth-login-http.entrypoints=http
-      - traefik.http.routers.auth-login-http.middlewares=redirect-to-https
-      - traefik.http.routers.auth-login-http.priority=200
-      - traefik.http.routers.auth-login-http.service=auth-login-svc
-      - 'traefik.http.routers.auth-logout-https.rule=Host(`${SB_HOST}`) && Path(`/logout`)'
-      - traefik.http.routers.auth-logout-https.entrypoints=https
-      - traefik.http.routers.auth-logout-https.tls=true
-      - traefik.http.routers.auth-logout-https.tls.certresolver=letsencrypt
-      - traefik.http.routers.auth-logout-https.priority=250
-      - traefik.http.routers.auth-logout-https.service=auth-login-svc
-      - 'traefik.http.routers.auth-logout-http.rule=Host(`${SB_HOST}`) && Path(`/logout`)'
-      - traefik.http.routers.auth-logout-http.entrypoints=http
-      - traefik.http.routers.auth-logout-http.middlewares=redirect-to-https
-      - traefik.http.routers.auth-logout-http.priority=250
-      - traefik.http.routers.auth-logout-http.service=auth-login-svc
-      - traefik.http.services.auth-login-svc.loadbalancer.server.port=80
+      traefik.enable: 'true'
+      traefik.http.routers.auth-login-https.rule: 'Host(`${SB_HOST}`) && PathPrefix(`/auth`)'
+      traefik.http.routers.auth-login-https.entrypoints: https
+      traefik.http.routers.auth-login-https.tls: 'true'
+      traefik.http.routers.auth-login-https.tls.certresolver: letsencrypt
+      traefik.http.routers.auth-login-https.priority: '200'
+      traefik.http.routers.auth-login-https.service: auth-login-svc
+      traefik.http.routers.auth-login-http.rule: 'Host(`${SB_HOST}`) && PathPrefix(`/auth`)'
+      traefik.http.routers.auth-login-http.entrypoints: http
+      traefik.http.routers.auth-login-http.middlewares: redirect-to-https
+      traefik.http.routers.auth-login-http.priority: '200'
+      traefik.http.routers.auth-login-http.service: auth-login-svc
+      traefik.http.routers.auth-logout-https.rule: 'Host(`${SB_HOST}`) && Path(`/logout`)'
+      traefik.http.routers.auth-logout-https.entrypoints: https
+      traefik.http.routers.auth-logout-https.tls: 'true'
+      traefik.http.routers.auth-logout-https.tls.certresolver: letsencrypt
+      traefik.http.routers.auth-logout-https.priority: '250'
+      traefik.http.routers.auth-logout-https.service: auth-login-svc
+      traefik.http.routers.auth-logout-http.rule: 'Host(`${SB_HOST}`) && Path(`/logout`)'
+      traefik.http.routers.auth-logout-http.entrypoints: http
+      traefik.http.routers.auth-logout-http.middlewares: redirect-to-https
+      traefik.http.routers.auth-logout-http.priority: '250'
+      traefik.http.routers.auth-logout-http.service: auth-login-svc
+      traefik.http.services.auth-login-svc.loadbalancer.server.port: '80'
 
