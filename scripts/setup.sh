@@ -325,9 +325,9 @@ if ! docker image inspect auth-gateway-login:local >/dev/null 2>&1; then
   docker build \
     --build-arg "VITE_SUPABASE_URL=https://$API_HOST" \
     --build-arg "VITE_SUPABASE_ANON_KEY=$ANON_KEY" \
-    --build-arg "VITE_COOKIE_DOMAIN=.$PARENT_DOMAIN" \
-    --build-arg "VITE_DEFAULT_REDIRECT=https://$SB_HOST" \
-    --build-arg "VITE_PARENT_DOMAIN=$PARENT_DOMAIN" \
+    --build-arg "VITE_COOKIE_DOMAIN=" \
+    --build-arg "VITE_DEFAULT_REDIRECT=/" \
+    --build-arg "VITE_PARENT_DOMAIN=" \
     --build-arg "VITE_APP_NAME=${APP_NAME:-Auth Gateway}" \
     -t auth-gateway-login:local "$REPO_DIR/login/" >/dev/null
 fi

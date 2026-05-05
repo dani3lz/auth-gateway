@@ -1,27 +1,41 @@
-# Login page (Vite + React + @supabase/auth-ui-react, served as static files
-# by Caddy). Built on the deploy host by setup.sh — VITE_* values are baked
-# into the bundle at build time, so the runtime image carries no secrets.
-#
-# Bare-root traefik middleware redirects https://AUTH_HOST/ (no query string)
-# back to https://SB_HOST/, so users can't casually browse the login page;
-# they have to arrive via the forward-auth flow with ?rd=.
 services:
   login:
-    image: auth-gateway-login:local
+    image: 'auth-gateway-login:local'
     environment:
-      - SERVICE_FQDN_LOGIN_80=https://${AUTH_HOST}
-      # Read at runtime by Caddy to inject Set-Cookie expiration on /logout.
-      - COOKIE_DOMAIN=.${PARENT_DOMAIN}
-      # Where the Caddy /logout redirect sends the user (cachebuster appended).
-      - LOGOUT_REDIRECT=https://${SB_HOST}/
+      - COOKIE_DOMAIN=
+      - 'LOGOUT_REDIRECT=https://${SB_HOST}/'
     expose:
       - '80'
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/ >/dev/null || exit 1']
+      test:
+        - CMD-SHELL
+        - 'wget -qO- http://127.0.0.1/auth/ >/dev/null || exit 1'
       interval: 10s
       timeout: 3s
       retries: 3
     labels:
-      - 'traefik.http.middlewares.login-root-redirect.redirectregex.regex=^https?://${AUTH_HOST_REGEX}/?$$'
-      - 'traefik.http.middlewares.login-root-redirect.redirectregex.replacement=https://${SB_HOST}/'
-      - 'traefik.http.middlewares.login-root-redirect.redirectregex.permanent=false'
+      - traefik.enable=true
+      - 'traefik.http.routers.auth-login-https.rule=Host(`${SB_HOST}`) && PathPrefix(`/auth`)'
+      - traefik.http.routers.auth-login-https.entrypoints=https
+      - traefik.http.routers.auth-login-https.tls=true
+      - traefik.http.routers.auth-login-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.auth-login-https.priority=200
+      - traefik.http.routers.auth-login-https.service=auth-login-svc
+      - 'traefik.http.routers.auth-login-http.rule=Host(`${SB_HOST}`) && PathPrefix(`/auth`)'
+      - traefik.http.routers.auth-login-http.entrypoints=http
+      - traefik.http.routers.auth-login-http.middlewares=redirect-to-https
+      - traefik.http.routers.auth-login-http.priority=200
+      - traefik.http.routers.auth-login-http.service=auth-login-svc
+      - 'traefik.http.routers.auth-logout-https.rule=Host(`${SB_HOST}`) && Path(`/logout`)'
+      - traefik.http.routers.auth-logout-https.entrypoints=https
+      - traefik.http.routers.auth-logout-https.tls=true
+      - traefik.http.routers.auth-logout-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.auth-logout-https.priority=250
+      - traefik.http.routers.auth-logout-https.service=auth-login-svc
+      - 'traefik.http.routers.auth-logout-http.rule=Host(`${SB_HOST}`) && Path(`/logout`)'
+      - traefik.http.routers.auth-logout-http.entrypoints=http
+      - traefik.http.routers.auth-logout-http.middlewares=redirect-to-https
+      - traefik.http.routers.auth-logout-http.priority=250
+      - traefik.http.routers.auth-logout-http.service=auth-login-svc
+      - traefik.http.services.auth-login-svc.loadbalancer.server.port=80
+

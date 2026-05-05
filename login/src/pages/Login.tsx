@@ -5,17 +5,20 @@ import { supabase } from "../lib/supabase";
 
 const APP_NAME = (import.meta.env.VITE_APP_NAME as string) || "Auth Gateway";
 const DEFAULT_REDIRECT = (import.meta.env.VITE_DEFAULT_REDIRECT as string) || "/";
-// Allowed parent for the `?rd=` redirect target. Set to your zone (e.g. "example.com")
-// so we only redirect to subdomains we control. If unset, only same-origin redirects pass.
+// Allowed parent for the `?rd=` redirect target. Only used when the auth UI
+// lives on a different subdomain than the protected app — for the same-origin
+// path-based deployment this should remain empty.
 const PARENT_DOMAIN = (import.meta.env.VITE_PARENT_DOMAIN as string) || "";
 
 function getRedirect(): string {
   const params = new URLSearchParams(window.location.search);
   const rd = params.get("rd");
   if (!rd) return DEFAULT_REDIRECT;
+  // Same-origin paths ("/...") are always safe.
+  if (rd.startsWith("/") && !rd.startsWith("//")) return rd;
   try {
-    const u = new URL(rd);
-    if (u.hostname === window.location.hostname) return rd;
+    const u = new URL(rd, window.location.origin);
+    if (u.origin === window.location.origin) return rd;
     if (PARENT_DOMAIN) {
       const dot = `.${PARENT_DOMAIN}`;
       if (u.hostname === PARENT_DOMAIN || u.hostname.endsWith(dot)) return rd;

@@ -1,5 +1,7 @@
 export interface CookieStorageOptions {
-  domain: string;
+  /** Cookie Domain attribute. Empty string → host-only cookie (recommended
+   *  when login + protected app share an origin). */
+  domain?: string;
   secure?: boolean;
   sameSite?: "Lax" | "Strict" | "None";
   path?: string;
@@ -7,8 +9,9 @@ export interface CookieStorageOptions {
 
 /**
  * A `Storage`-compatible adapter that persists Supabase auth state
- * to cookies scoped to a parent domain (e.g. ".example.com"), so the
- * forward-auth validator on a sibling subdomain can read the JWT.
+ * to cookies. Use a parent-domain `domain` when login and protected
+ * apps live on different subdomains; pass `""` for host-only when
+ * they share an origin.
  *
  * Note: cookies set from JS cannot be HttpOnly. We accept this trade-off
  * because supabase-js needs to read the token client-side. The validator
@@ -18,9 +21,9 @@ export interface CookieStorageOptions {
 export class CookieStorage implements Storage {
   private readonly opts: Required<CookieStorageOptions>;
 
-  constructor(opts: CookieStorageOptions) {
+  constructor(opts: CookieStorageOptions = {}) {
     this.opts = {
-      domain: opts.domain,
+      domain: opts.domain ?? "",
       secure: opts.secure ?? true,
       sameSite: opts.sameSite ?? "Lax",
       path: opts.path ?? "/",
@@ -62,18 +65,15 @@ export class CookieStorage implements Storage {
 
   setItem(key: string, value: string): void {
     const v = encodeURIComponent(value);
-    const parts = [
-      `${key}=${v}`,
-      `Domain=${this.opts.domain}`,
-      `Path=${this.opts.path}`,
-      `SameSite=${this.opts.sameSite}`,
-      "Max-Age=2592000",
-    ];
+    const parts = [`${key}=${v}`, `Path=${this.opts.path}`, `SameSite=${this.opts.sameSite}`, "Max-Age=2592000"];
+    if (this.opts.domain) parts.push(`Domain=${this.opts.domain}`);
     if (this.opts.secure) parts.push("Secure");
     document.cookie = parts.join("; ");
   }
 
   removeItem(key: string): void {
-    document.cookie = `${key}=; Domain=${this.opts.domain}; Path=${this.opts.path}; Max-Age=0`;
+    const parts = [`${key}=`, `Path=${this.opts.path}`, "Max-Age=0"];
+    if (this.opts.domain) parts.push(`Domain=${this.opts.domain}`);
+    document.cookie = parts.join("; ");
   }
 }

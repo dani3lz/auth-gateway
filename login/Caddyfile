@@ -1,27 +1,35 @@
-{
-  # Allow setting Set-Cookie multiple times with different attribute combos
-  # (Caddy ≥2.6 does this with the `>` operator).
-}
-
 :80 {
-  root * /srv
   encode gzip zstd
 
-  # /logout — pure HTTP redirect with explicit cookie expiration headers.
-  # No SPA, no JS — atomic clear at the proxy layer.
-  # Fires three Set-Cookie headers covering every plausible attribute combo.
-  # Cachebusting query param on destination forces traefik forward-auth to
-  # re-evaluate (browsers won't reuse a cached 200 for a different URL).
+  # /logout — pure HTTP redirect that clears the auth cookie and bounces
+  # the browser back to the protected app with a cachebuster. Three
+  # Set-Cookie variants cover every plausible attribute combo.
   @logout path /logout
-  header @logout +Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0; Secure; SameSite=Lax"
-  header @logout +Set-Cookie "sb-access-token=; Path=/; Max-Age=0; Secure; SameSite=Lax"
-  header @logout +Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0"
-  header @logout Cache-Control "no-store"
-  redir @logout {$LOGOUT_REDIRECT}?_logged_out=1 302
+  handle @logout {
+    header +Set-Cookie "sb-access-token=; Path=/; Max-Age=0; Secure; SameSite=Lax"
+    header +Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0; Secure; SameSite=Lax"
+    header +Set-Cookie "sb-access-token=; Path=/; Max-Age=0"
+    header Cache-Control "no-store"
+    redir {$LOGOUT_REDIRECT}?_logged_out=1 302
+  }
 
-  try_files {path} {path}/ /index.html
-  file_server
+  # /auth/* — strip the prefix so Caddy serves the SPA from /srv as if it
+  # were the document root. The Vite build's `base: "/auth/"` means asset
+  # URLs already include /auth, so the browser never needs the prefix
+  # stripped at the client side.
+  @auth path /auth /auth/*
+  handle @auth {
+    uri strip_prefix /auth
+    root * /srv
+    try_files {path} {path}/ /index.html
+    file_server
+    header /assets/* Cache-Control "public, max-age=31536000, immutable"
+    header / Cache-Control "no-cache"
+  }
 
-  header /assets/* Cache-Control "public, max-age=31536000, immutable"
-  header / Cache-Control "no-cache"
+  # Default — anything else hitting this container (which won't normally
+  # happen since traefik only routes /auth and /logout here) gets a 404.
+  handle {
+    respond "Not Found" 404
+  }
 }
