@@ -1,3 +1,2 @@
-export function App() {
-  return <div>Soltrix login (skeleton)</div>;
-}
+import { Login } from "./pages/Login";
+export function App() { return <Login />; }
