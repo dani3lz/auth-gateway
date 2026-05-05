@@ -1,0 +1,17 @@
+# Used by setup.sh as docker_compose_raw on the auth-validator service.
+services:
+  validator:
+    image: 'ghcr.io/${GH_OWNER}/auth-gateway-validator:latest'
+    environment:
+      - SERVICE_FQDN_VALIDATOR_8080=https://auth-verify.sb.soltrix.dev
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - LOGIN_URL=https://auth.sb.soltrix.dev
+      - COOKIE_NAME=sb-access-token
+      - PORT=8080
+    expose:
+      - '8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/healthz | grep -q ok']
+      interval: 10s
+      timeout: 3s
+      retries: 3
