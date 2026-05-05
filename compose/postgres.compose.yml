@@ -1,0 +1,43 @@
+# Standalone Postgres for Supabase to use.
+#
+# This is for documentation only — setup.sh deploys Postgres via Coolify's
+# `databases/postgresql` API endpoint (which gives you backups, the Coolify UI,
+# and the right network setup for free), not via this compose file. The image,
+# user, and bootstrap behavior here mirror what the API call requests.
+#
+# If you ever want to run it standalone (outside Coolify), this file works.
+services:
+  postgres:
+    image: 'supabase/postgres:15.8.1.060'
+    environment:
+      POSTGRES_USER: supabase_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - 'postgres-data:/var/lib/postgresql/data'
+      # The 7 init scripts that bootstrap Supabase's auth/storage/realtime/etc schemas.
+      - '../scripts/postgres-init/_supabase.sql:/docker-entrypoint-initdb.d/01-_supabase.sql:ro'
+      - '../scripts/postgres-init/realtime.sql:/docker-entrypoint-initdb.d/02-realtime.sql:ro'
+      - '../scripts/postgres-init/pooler.sql:/docker-entrypoint-initdb.d/03-pooler.sql:ro'
+      - '../scripts/postgres-init/logs.sql:/docker-entrypoint-initdb.d/04-logs.sql:ro'
+      - '../scripts/postgres-init/webhooks.sql:/docker-entrypoint-initdb.d/05-webhooks.sql:ro'
+      - '../scripts/postgres-init/jwt.sql:/docker-entrypoint-initdb.d/06-jwt.sql:ro'
+      - '../scripts/postgres-init/roles.sql:/docker-entrypoint-initdb.d/07-roles.sql:ro'
+      # pgsodium key script (required for Supabase Vault). Generate the key in setup.sh.
+      - 'pgsodium-config:/etc/postgresql-custom'
+    command:
+      - postgres
+      - '-c'
+      - 'shared_preload_libraries=pgsodium,pg_stat_statements,pgaudit,pg_cron,pg_net'
+      - '-c'
+      - 'pgsodium.getkey_script=/etc/postgresql-custom/pgsodium_getkey.sh'
+      - '-c'
+      - 'wal_level=logical'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U supabase_admin']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres-data:
+  pgsodium-config:

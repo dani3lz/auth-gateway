@@ -1,0 +1,26 @@
+# MinIO — S3-compatible object storage that Supabase Storage uses as its backend.
+# Deployed by setup.sh as a Coolify service via docker_compose_raw with this content.
+#
+# SERVICE_FQDN_<SERVICENAME>_<PORT> env vars are Coolify's convention: each one
+# generates traefik routing labels that publish the given internal port at the
+# configured public host with TLS.
+services:
+  minio:
+    image: 'quay.io/minio/minio:latest'
+    command: 'server /data --console-address ":9001"'
+    environment:
+      - SERVICE_FQDN_MINIO_9000=https://${S3_HOST}
+      - SERVICE_FQDN_MINIO_9001=https://${MINIO_CONSOLE_HOST}
+      - MINIO_SERVER_URL=https://${S3_HOST}
+      - MINIO_BROWSER_REDIRECT_URL=https://${MINIO_CONSOLE_HOST}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - 'minio-data:/data'
+    healthcheck:
+      test: ['CMD-SHELL', 'mc ready local || curl -f http://127.0.0.1:9000/minio/health/live']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+volumes:
+  minio-data:

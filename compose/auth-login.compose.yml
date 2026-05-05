@@ -1,0 +1,23 @@
+# Login page (Vite + React + @supabase/auth-ui-react, served as static files
+# by Caddy). Built on the deploy host by setup.sh — VITE_* values are baked
+# into the bundle at build time, so the runtime image carries no secrets.
+#
+# Bare-root traefik middleware redirects https://AUTH_HOST/ (no query string)
+# back to https://SB_HOST/, so users can't casually browse the login page;
+# they have to arrive via the forward-auth flow with ?rd=.
+services:
+  login:
+    image: auth-gateway-login:local
+    environment:
+      - SERVICE_FQDN_LOGIN_80=https://${AUTH_HOST}
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/ >/dev/null || exit 1']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    labels:
+      - 'traefik.http.middlewares.login-root-redirect.redirectregex.regex=^https?://${AUTH_HOST_REGEX}/?$$'
+      - 'traefik.http.middlewares.login-root-redirect.redirectregex.replacement=https://${SB_HOST}/'
+      - 'traefik.http.middlewares.login-root-redirect.redirectregex.permanent=false'

@@ -1,0 +1,22 @@
+# Forward-auth validator. Reads the JWT cookie set by the login app, verifies
+# the signature against SUPABASE_JWT_SECRET, returns 200 (with X-User-* headers)
+# or 302 to the login page.
+#
+# `image: auth-gateway-validator:local` — built on the deploy host by setup.sh
+# from the validator/ folder. No external registry needed.
+services:
+  validator:
+    image: auth-gateway-validator:local
+    environment:
+      - SERVICE_FQDN_VALIDATOR_8080=https://${AUTH_VERIFY_HOST}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - LOGIN_URL=https://${AUTH_HOST}
+      - COOKIE_NAME=sb-access-token
+      - PORT=8080
+    expose:
+      - '8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/healthz | grep -q ok']
+      interval: 10s
+      timeout: 3s
+      retries: 3

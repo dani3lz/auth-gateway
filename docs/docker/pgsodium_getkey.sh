@@ -1,2 +1,0 @@
-#!/bin/bash
-echo 8eb3dd11d902cbdeecc3294e312fd35dc864b3613b09e799ca36264a94be1d89
