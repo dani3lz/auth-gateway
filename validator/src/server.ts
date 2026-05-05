@@ -12,7 +12,23 @@ app.all("/verify", async (c) => {
   const COOKIE_NAME = process.env.COOKIE_NAME || "sb-access-token";
 
   const cookies = parseCookies(c.req.header("cookie"));
-  const token = cookies[COOKIE_NAME];
+  // supabase-js stores the entire session as a JSON object under the cookie:
+  //   {"access_token":"eyJ...","refresh_token":"...","expires_at":..., "user":{...}}
+  // For a "raw token" mode we also accept a bare JWT (starts with "eyJ").
+  const raw = cookies[COOKIE_NAME];
+  let token = "";
+  if (raw) {
+    if (raw.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(raw);
+        token = typeof parsed.access_token === "string" ? parsed.access_token : "";
+      } catch {
+        token = "";
+      }
+    } else {
+      token = raw;
+    }
+  }
 
   const buildRedirect = () => {
     const xfHost = c.req.header("x-forwarded-host") || "";

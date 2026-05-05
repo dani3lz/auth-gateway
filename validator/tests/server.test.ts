@@ -19,7 +19,7 @@ async function makeToken(claims: Record<string, unknown>) {
 }
 
 describe("/verify", () => {
-  test("returns 200 + user headers when cookie has valid token", async () => {
+  test("returns 200 + user headers when cookie has a bare JWT", async () => {
     const token = await makeToken({ sub: "u1", email: "x@y.com", role: "authenticated" });
     const res = await app.request("/verify", {
       headers: { Cookie: `sb-access-token=${token}` },
@@ -27,6 +27,16 @@ describe("/verify", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("X-User-Id")).toBe("u1");
     expect(res.headers.get("X-User-Email")).toBe("x@y.com");
+  });
+
+  test("returns 200 when cookie is a supabase-js session JSON envelope", async () => {
+    const token = await makeToken({ sub: "u2", email: "j@k.com", role: "authenticated" });
+    const session = JSON.stringify({ access_token: token, refresh_token: "r", expires_at: 99 });
+    const res = await app.request("/verify", {
+      headers: { Cookie: `sb-access-token=${encodeURIComponent(session)}` },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-User-Email")).toBe("j@k.com");
   });
 
   test("returns 302 to LOGIN_URL when no cookie is present", async () => {
