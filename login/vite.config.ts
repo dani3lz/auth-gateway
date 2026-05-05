@@ -4,5 +4,12 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { host: "0.0.0.0", port: 5173 },
-  test: { environment: "happy-dom", globals: true },
+  test: {
+    environment: "happy-dom",
+    globals: true,
+    setupFiles: ["src/test-setup.ts"],
+    environmentOptions: {
+      happyDOM: { url: "http://sub.example.com/" },
+    },
+  },
 });
