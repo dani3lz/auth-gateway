@@ -301,6 +301,43 @@ ok "Supabase deployed"
 # ---------------------------------------------------------------------------
 # 4. Validator
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 3c. Add a session-mode user to Supavisor's tenant so Studio's "Session
+# pooler" connection string is functional. Cloud Supabase ships both modes
+# per tenant; the bundled self-host pooler.exs only registers transaction.
+# ---------------------------------------------------------------------------
+log "Step 3c/7: Register Supavisor session-mode user on dev_tenant"
+SUPAVISOR_API="http://supabase-supavisor-${SUPA_UUID}:4000"
+API_TOKEN_ELIXIR="$(python3 -c "
+import jwt, time
+print(jwt.encode({'iss':'supabase','iat':int(time.time()),'exp':int(time.time())+300,'role':'supabase_admin'}, '$JWT_SECRET', algorithm='HS256'))" 2>/dev/null || true)"
+if [ -n "$API_TOKEN_ELIXIR" ]; then
+  TENANT_BODY=$(python3 -c "
+import json
+print(json.dumps({'tenant':{
+  'external_id':'dev_tenant',
+  'db_host':'$PG_UUID','db_port':5432,'db_database':'postgres',
+  'ip_version':'auto','require_user':False,
+  'auth_query':'SELECT * FROM pgbouncer.get_auth(\$1)',
+  'default_max_clients':100,'default_pool_size':20,
+  'users':[
+    {'db_user':'pgbouncer','db_user_alias':'pgbouncer','db_password':'$SUPA_PG_PASS',
+     'mode_type':'transaction','pool_size':20,'max_clients':100,'is_manager':True,
+     'pool_checkout_timeout':60000},
+    {'db_user':'pgbouncer','db_user_alias':'pgbouncer','db_password':'$SUPA_PG_PASS',
+     'mode_type':'session','pool_size':20,'max_clients':100,'is_manager':False,
+     'pool_checkout_timeout':60000}
+  ]
+}}))")
+  docker run --rm --network "$SUPA_UUID" -v /dev/stdin:/body.json:ro curlimages/curl \
+    -sk -X PUT -H "Authorization: Bearer $API_TOKEN_ELIXIR" -H "Content-Type: application/json" \
+    -d @/body.json "$SUPAVISOR_API/api/tenants/dev_tenant" <<<"$TENANT_BODY" >/dev/null && \
+    docker restart "supabase-supavisor-$SUPA_UUID" >/dev/null && \
+    ok "Supavisor session-mode user registered"
+else
+  warn "PyJWT not available; skipping session-pooler registration. Install with: pip install pyjwt"
+fi
+
 log "Step 4/7: Build + deploy auth-validator"
 if ! docker image inspect auth-gateway-validator:local >/dev/null 2>&1; then
   docker build -t auth-gateway-validator:local "$REPO_DIR/validator/" >/dev/null
