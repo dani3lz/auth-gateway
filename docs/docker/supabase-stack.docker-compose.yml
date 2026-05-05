@@ -1,0 +1,905 @@
+services:
+  supabase-kong:
+    image: kong/kong:3.9.1
+    entrypoint: /home/kong/kong-entrypoint.sh
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - kong
+      - health
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      SERVICE_URL_SUPABASEKONG_8000: https://api.sb.soltrix.dev:8000
+      KONG_PORT_MAPS: 443:8000
+      JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      KONG_DATABASE: 'off'
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_DNS_NOT_FOUND_TTL: '1'
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_PROXY_ACCESS_LOG: /dev/stdout combined
+      SUPABASE_ANON_KEY: ${SERVICE_SUPABASEANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_SUPABASESERVICE_KEY}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      ANON_KEY_ASYMMETRIC: ${ANON_KEY_ASYMMETRIC:-}
+      SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
+      DASHBOARD_USERNAME: ${SERVICE_USER_ADMIN}
+      DASHBOARD_PASSWORD: ${SERVICE_PASSWORD_ADMIN}
+      KONG_STORAGE_CONNECT_TIMEOUT: ${KONG_STORAGE_CONNECT_TIMEOUT:-60}
+      KONG_STORAGE_WRITE_TIMEOUT: ${KONG_STORAGE_WRITE_TIMEOUT:-3600}
+      KONG_STORAGE_READ_TIMEOUT: ${KONG_STORAGE_READ_TIMEOUT:-3600}
+      KONG_STORAGE_REQUEST_BUFFERING: ${KONG_STORAGE_REQUEST_BUFFERING:-false}
+      KONG_STORAGE_RESPONSE_BUFFERING: ${KONG_STORAGE_RESPONSE_BUFFERING:-false}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-kong-acg480k0ogok4480wgks0k4w
+      COOLIFY_FQDN: api.sb.soltrix.dev
+      COOLIFY_URL: https://api.sb.soltrix.dev
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/api/kong-entrypoint.sh:/home/kong/kong-entrypoint.sh
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/api/kong.yml:/home/kong/temp.yml
+    container_name: supabase-kong-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-kong-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-kong
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=28
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-kong
+    - traefik.enable=true
+    - traefik.http.middlewares.gzip.compress=true
+    - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+    - traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-kong.entryPoints=http
+    - traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-kong.middlewares=redirect-to-https
+    - traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-kong.rule=Host(`api.sb.soltrix.dev`) && PathPrefix(`/`)
+    - traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-kong.entryPoints=https
+    - traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-kong.middlewares=gzip
+    - traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-kong.rule=Host(`api.sb.soltrix.dev`) && PathPrefix(`/`)
+    - traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-kong.tls.certresolver=letsencrypt
+    - traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-kong.tls=true
+    - caddy_0.encode=zstd gzip
+    - caddy_0.handle_path.0_reverse_proxy={{upstreams 8000}}
+    - caddy_0.handle_path=/*
+    - caddy_0.header=-Server
+    - caddy_0.try_files={path} /index.html /index.php
+    - caddy_0=https://api.sb.soltrix.dev
+    - caddy_ingress_network=acg480k0ogok4480wgks0k4w
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-studio:
+    image: supabase/studio:2026.03.16-sha-5528817
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - fetch('http://127.0.0.1:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    environment:
+      HOSTNAME: 0.0.0.0
+      STUDIO_PG_META_URL: http://supabase-meta:8080
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_HOST: ${POSTGRES_HOST:-supabase-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public,storage,graphql_public}
+      PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
+      PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION:-Default Organization}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT:-Default Project}
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_PUBLIC_URL: ${SERVICE_URL_SUPABASEKONG}
+      SUPABASE_ANON_KEY: ${SERVICE_SUPABASEANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_SUPABASESERVICE_KEY}
+      AUTH_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      PG_META_CRYPTO_KEY: ${SERVICE_PASSWORD_PGMETACRYPTO}
+      LOGFLARE_API_KEY: ${SERVICE_PASSWORD_LOGFLARE}
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${SERVICE_PASSWORD_LOGFLARE}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${SERVICE_PASSWORD_LOGFLAREPRIVATE}
+      LOGFLARE_URL: http://supabase-analytics:4000
+      NEXT_PUBLIC_SUPABASE_URL: ${SERVICE_URL_SUPABASEKONG}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SERVICE_SUPABASEANON_KEY}
+      NEXT_PUBLIC_ENABLE_LOGS: 'true'
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
+      EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-studio-acg480k0ogok4480wgks0k4w
+      COOLIFY_FQDN: sb.soltrix.dev
+      COOLIFY_URL: https://sb.soltrix.dev
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/snippets:/app/snippets
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/functions:/app/edge-functions
+    container_name: supabase-studio-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+      coolify.managed: 'true'
+      coolify.version: 4.0.0-beta.444
+      coolify.serviceId: '14'
+      coolify.type: service
+      coolify.name: supabase-studio-acg480k0ogok4480wgks0k4w
+      coolify.resourceName: supabase-acg480k0ogok4480wgks0k4w
+      coolify.projectName: test
+      coolify.serviceName: supabase-studio
+      coolify.environmentName: production
+      coolify.pullRequestId: '0'
+      coolify.service.subId: '29'
+      coolify.service.subType: application
+      coolify.service.subName: supabase-studio
+      traefik.enable: 'true'
+      traefik.http.middlewares.gzip.compress: 'true'
+      traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
+      traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.entryPoints: http
+      traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.middlewares: redirect-to-https,authentik
+      traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.rule: Host(`sb.soltrix.dev`) && PathPrefix(`/`)
+      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.entryPoints: https
+      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.middlewares: gzip,authentik
+      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.rule: Host(`sb.soltrix.dev`) && PathPrefix(`/`)
+      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.tls.certresolver: letsencrypt
+      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.tls: 'true'
+      caddy_0.encode: zstd gzip
+      caddy_0.handle_path.0_reverse_proxy: '{{upstreams}}'
+      caddy_0.handle_path: /*
+      caddy_0.header: -Server
+      caddy_0.try_files: '{path} /index.html /index.php'
+      caddy_0: https://sb.soltrix.dev
+      caddy_ingress_network: acg480k0ogok4480wgks0k4w
+      traefik.http.middlewares.authentik.forwardauth.address: http://authentik-server-asc44o0ss8kgoo44gso04ggo:9000/outpost.goauthentik.io/auth/traefik
+      traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: 'true'
+      traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-analytics:
+    image: supabase/logflare:1.31.2
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - http://127.0.0.1:4000/health
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    environment:
+      LOGFLARE_NODE_HOST: 127.0.0.1
+      DB_USERNAME: supabase_admin
+      DB_DATABASE: _supabase
+      DB_HOSTNAME: ${POSTGRES_HOSTNAME:-supabase-db}
+      DB_PORT: ${POSTGRES_PORT:-5432}
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      DB_SCHEMA: _analytics
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${SERVICE_PASSWORD_LOGFLARE}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${SERVICE_PASSWORD_LOGFLAREPRIVATE}
+      LOGFLARE_SINGLE_TENANT: 'true'
+      LOGFLARE_SUPABASE_MODE: 'true'
+      POSTGRES_BACKEND_URL: postgresql://supabase_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/_supabase
+      POSTGRES_BACKEND_SCHEMA: _analytics
+      LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-analytics-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    container_name: supabase-analytics-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-analytics-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-analytics
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=30
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-analytics
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-vector:
+    image: timberio/vector:0.53.0-alpine
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://supabase-vector:9001/health
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/logs/vector.yml:/etc/vector/vector.yml
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${SERVICE_PASSWORD_LOGFLARE}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-vector-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    command:
+    - --config
+    - /etc/vector/vector.yml
+    container_name: supabase-vector-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-vector-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-vector
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=31
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-vector
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-rest:
+    image: postgrest/postgrest:v14.6
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public,storage,graphql_public}
+      PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
+      PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      PGRST_DB_USE_LEGACY_GUCS: 'false'
+      PGRST_APP_SETTINGS_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-rest-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    command: postgrest
+    container_name: supabase-rest-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-rest-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-rest
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=32
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-rest
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-auth:
+    image: supabase/gotrue:v2.186.0
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://127.0.0.1:9999/health
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: '9999'
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://supabase-kong:8000}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      GOTRUE_SITE_URL: ${GOTRUE_SITE_URL:-${SERVICE_URL_SUPABASEKONG}}
+      GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+      GOTRUE_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${ENABLE_ANONYMOUS_USERS:-false}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+      GOTRUE_MAILER_URLPATHS_INVITE: ${MAILER_URLPATHS_INVITE:-/auth/v1/verify}
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: ${MAILER_URLPATHS_CONFIRMATION:-/auth/v1/verify}
+      GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY:-/auth/v1/verify}
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE:-/auth/v1/verify}
+      GOTRUE_MAILER_TEMPLATES_INVITE: ${MAILER_TEMPLATES_INVITE}
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: ${MAILER_TEMPLATES_CONFIRMATION}
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: ${MAILER_TEMPLATES_RECOVERY}
+      GOTRUE_MAILER_TEMPLATES_MAGIC_LINK: ${MAILER_TEMPLATES_MAGIC_LINK}
+      GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: ${MAILER_TEMPLATES_EMAIL_CHANGE}
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: ${MAILER_SUBJECTS_CONFIRMATION}
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: ${MAILER_SUBJECTS_RECOVERY}
+      GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: ${MAILER_SUBJECTS_MAGIC_LINK}
+      GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: ${MAILER_SUBJECTS_EMAIL_CHANGE}
+      GOTRUE_MAILER_SUBJECTS_INVITE: ${MAILER_SUBJECTS_INVITE}
+      GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP:-true}
+      GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM:-true}
+      ADDITIONAL_REDIRECT_URLS: ${ADDITIONAL_REDIRECT_URLS}
+      SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+      MAILER_TEMPLATES_INVITE: ${MAILER_TEMPLATES_INVITE}
+      MAILER_TEMPLATES_CONFIRMATION: ${MAILER_TEMPLATES_CONFIRMATION}
+      MAILER_TEMPLATES_RECOVERY: ${MAILER_TEMPLATES_RECOVERY}
+      MAILER_TEMPLATES_MAGIC_LINK: ${MAILER_TEMPLATES_MAGIC_LINK}
+      MAILER_TEMPLATES_EMAIL_CHANGE: ${MAILER_TEMPLATES_EMAIL_CHANGE}
+      MAILER_SUBJECTS_CONFIRMATION: ${MAILER_SUBJECTS_CONFIRMATION}
+      MAILER_SUBJECTS_RECOVERY: ${MAILER_SUBJECTS_RECOVERY}
+      MAILER_SUBJECTS_MAGIC_LINK: ${MAILER_SUBJECTS_MAGIC_LINK}
+      MAILER_SUBJECTS_EMAIL_CHANGE: ${MAILER_SUBJECTS_EMAIL_CHANGE}
+      MAILER_SUBJECTS_INVITE: ${MAILER_SUBJECTS_INVITE}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-auth-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    container_name: supabase-auth-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-auth-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-auth
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=33
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-auth
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  realtime-dev:
+    image: supabase/realtime:v2.76.5
+    container_name: realtime-dev-acg480k0ogok4480wgks0k4w
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -sSfL
+      - --head
+      - -o
+      - /dev/null
+      - -H
+      - 'Authorization: Bearer ${SERVICE_SUPABASEANON_KEY}'
+      - http://127.0.0.1:4000/api/tenants/realtime-dev/health
+      timeout: 5s
+      interval: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      PORT: '4000'
+      DB_HOST: ${POSTGRES_HOSTNAME:-supabase-db}
+      DB_PORT: ${POSTGRES_PORT:-5432}
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      DB_NAME: ${POSTGRES_DB:-postgres}
+      DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      SECRET_KEY_BASE: ${SECRET_PASSWORD_REALTIME}
+      METRICS_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: ''''''
+      RLIMIT_NOFILE: '10000'
+      APP_NAME: realtime
+      SEED_SELF_HOST: 'true'
+      LOG_LEVEL: error
+      RUN_JANITOR: 'true'
+      JANITOR_INTERVAL: '60000'
+      DISABLE_HEALTHCHECK_LOGGING: 'true'
+      SECRET_PASSWORD_REALTIME: ${SECRET_PASSWORD_REALTIME}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: realtime-dev-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    command: 'sh -c "/app/bin/migrate && /app/bin/realtime eval ''Realtime.Release.seeds(Realtime.Repo)'' && /app/bin/server"
+
+      '
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=realtime-dev-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=realtime-dev
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=34
+    - coolify.service.subType=application
+    - coolify.service.subName=realtime-dev
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-storage:
+    image: supabase/storage-api:v1.44.2
+    depends_on:
+      supabase-rest:
+        condition: service_started
+      imgproxy:
+        condition: service_started
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://127.0.0.1:5000/status
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      SERVER_PORT: '5000'
+      SERVER_REGION: local
+      MULTI_TENANT: 'false'
+      AUTH_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      DATABASE_URL: postgres://supabase_storage_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      DB_INSTALL_ROLES: 'false'
+      STORAGE_BACKEND: s3
+      STORAGE_S3_BUCKET: stub
+      STORAGE_S3_ENDPOINT: http://minio-rk4cgsggk0kocccsgksgcs48:9000
+      STORAGE_S3_FORCE_PATH_STYLE: 'true'
+      STORAGE_S3_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${SERVICE_USER_MINIO}
+      AWS_SECRET_ACCESS_KEY: ${SERVICE_PASSWORD_MINIO}
+      UPLOAD_FILE_SIZE_LIMIT: '524288000'
+      UPLOAD_FILE_SIZE_LIMIT_STANDARD: '524288000'
+      UPLOAD_SIGNED_URL_EXPIRATION_TIME: '120'
+      TUS_URL_PATH: /upload/resumable
+      TUS_MAX_SIZE: '3600000'
+      ENABLE_IMAGE_TRANSFORMATION: 'true'
+      IMGPROXY_URL: http://imgproxy:8080
+      IMGPROXY_REQUEST_TIMEOUT: '15'
+      DATABASE_SEARCH_PATH: storage
+      NODE_ENV: production
+      REQUEST_ALLOW_X_FORWARDED_PATH: 'true'
+      ANON_KEY: ${SERVICE_SUPABASEANON_KEY}
+      SERVICE_KEY: ${SERVICE_SUPABASESERVICE_KEY}
+      POSTGREST_URL: http://supabase-rest:3000
+      PGRST_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      STORAGE_PUBLIC_URL: ${SERVICE_URL_SUPABASEKONG}
+      TENANT_ID: ${STORAGE_TENANT_ID:-storage-single-tenant}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-storage-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/storage:/var/lib/storage
+    container_name: supabase-storage-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-storage-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-storage
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=37
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-storage
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  imgproxy:
+    image: darthsim/imgproxy:v3.30.1
+    healthcheck:
+      test:
+      - CMD
+      - imgproxy
+      - health
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      IMGPROXY_BIND: :8080
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: 'true'
+      IMGPROXY_AUTO_WEBP: ${IMGPROXY_AUTO_WEBP:-true}
+      IMGPROXY_MAX_SRC_RESOLUTION: '16.8'
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: imgproxy-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/storage:/var/lib/storage
+    container_name: imgproxy-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=imgproxy-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=imgproxy
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=38
+    - coolify.service.subType=application
+    - coolify.service.subName=imgproxy
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-meta:
+    image: supabase/postgres-meta:v0.95.2
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: '8080'
+      PG_META_DB_HOST: ${POSTGRES_HOSTNAME:-supabase-db}
+      PG_META_DB_PORT: ${POSTGRES_PORT:-5432}
+      PG_META_DB_NAME: ${POSTGRES_DB:-postgres}
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      CRYPTO_KEY: ${SERVICE_PASSWORD_PGMETACRYPTO}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-meta-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    container_name: supabase-meta-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-meta-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-meta
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=39
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-meta
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-edge-functions:
+    image: supabase/edge-runtime:v1.71.2
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - echo
+      - Edge Functions is healthy
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_PUBLIC_URL: ${SERVICE_URL_SUPABASEKONG}
+      SUPABASE_ANON_KEY: ${SERVICE_SUPABASEANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_SUPABASESERVICE_KEY}
+      SUPABASE_DB_URL: postgresql://postgres:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      VERIFY_JWT: ${FUNCTIONS_VERIFY_JWT:-false}
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-edge-functions-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/functions:/home/deno/functions
+    - acg480k0ogok4480wgks0k4w_deno-cache:/root/.cache/deno
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/functions/main/index.ts:/home/deno/functions/main/index.ts
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/functions/hello/index.ts:/home/deno/functions/hello/index.ts
+    command:
+    - start
+    - --main-service
+    - /home/deno/functions/main
+    container_name: supabase-edge-functions-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-edge-functions-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-edge-functions
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=40
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-edge-functions
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+  supabase-supavisor:
+    image: supabase/supavisor:2.7.4
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -sSfL
+      - -o
+      - /dev/null
+      - http://127.0.0.1:4000/api/health
+      timeout: 5s
+      interval: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      supabase-analytics:
+        condition: service_healthy
+    environment:
+      POOLER_TENANT_ID: ${POOLER_TENANT_ID:-dev_tenant}
+      POOLER_POOL_MODE: transaction
+      POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE:-20}
+      POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN:-100}
+      PORT: '4000'
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_HOSTNAME: ${POSTGRES_HOSTNAME:-supabase-db}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      DATABASE_URL: ecto://supabase_admin:${SERVICE_PASSWORD_POSTGRES}@${POSTGRES_HOSTNAME:-supabase-db}:${POSTGRES_PORT:-5432}/_supabase
+      CLUSTER_POSTGRES: 'true'
+      SECRET_KEY_BASE: ${SERVICE_PASSWORD_SUPAVISORSECRET}
+      VAULT_ENC_KEY: ${SERVICE_PASSWORD_VAULTENC}
+      API_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      METRICS_JWT_SECRET: ${SERVICE_PASSWORD_JWT}
+      REGION: local
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE:-5}
+      GLOBAL_DOWNSTREAM_CERT_PATH: /etc/ssl/server.crt
+      GLOBAL_DOWNSTREAM_KEY_PATH: /etc/ssl/server.key
+      COOLIFY_RESOURCE_UUID: acg480k0ogok4480wgks0k4w
+      COOLIFY_CONTAINER_NAME: supabase-supavisor-acg480k0ogok4480wgks0k4w
+      SERVICE_NAME_SUPABASE_KONG: supabase-kong
+      SERVICE_NAME_SUPABASE_STUDIO: supabase-studio
+      SERVICE_NAME_SUPABASE_ANALYTICS: supabase-analytics
+      SERVICE_NAME_SUPABASE_VECTOR: supabase-vector
+      SERVICE_NAME_SUPABASE_REST: supabase-rest
+      SERVICE_NAME_SUPABASE_AUTH: supabase-auth
+      SERVICE_NAME_REALTIME_DEV: realtime-dev
+      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
+      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
+      SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
+      SERVICE_NAME_IMGPROXY: imgproxy
+      SERVICE_NAME_SUPABASE_META: supabase-meta
+      SERVICE_NAME_SUPABASE_EDGE_FUNCTIONS: supabase-edge-functions
+      SERVICE_NAME_SUPABASE_SUPAVISOR: supabase-supavisor
+    command:
+    - /bin/sh
+    - -c
+    - "if [ ! -f /etc/ssl/server.crt ]; then\n  openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \\\n    -keyout /etc/ssl/server.key -out /etc/ssl/server.crt \\\n    -subj \"/CN=supabase-pooler\"\nfi\n/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server\n"
+    volumes:
+    - /data/coolify/services/acg480k0ogok4480wgks0k4w/volumes/pooler/pooler.exs:/etc/pooler/pooler.exs
+    container_name: supabase-supavisor-acg480k0ogok4480wgks0k4w
+    restart: unless-stopped
+    labels:
+    - coolify.managed=true
+    - coolify.version=4.0.0-beta.444
+    - coolify.serviceId=14
+    - coolify.type=service
+    - coolify.name=supabase-supavisor-acg480k0ogok4480wgks0k4w
+    - coolify.resourceName=supabase-acg480k0ogok4480wgks0k4w
+    - coolify.projectName=test
+    - coolify.serviceName=supabase-supavisor
+    - coolify.environmentName=production
+    - coolify.pullRequestId=0
+    - coolify.service.subId=41
+    - coolify.service.subType=application
+    - coolify.service.subName=supabase-supavisor
+    networks:
+      acg480k0ogok4480wgks0k4w: null
+    env_file:
+    - .env
+volumes:
+  acg480k0ogok4480wgks0k4w_deno-cache:
+    name: acg480k0ogok4480wgks0k4w_deno-cache
+networks:
+  acg480k0ogok4480wgks0k4w:
+    name: acg480k0ogok4480wgks0k4w
+    external: true
