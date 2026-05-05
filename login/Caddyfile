@@ -1,0 +1,8 @@
+:80 {
+  root * /srv
+  encode gzip zstd
+  try_files {path} {path}/ /index.html
+  file_server
+  header /assets/* Cache-Control "public, max-age=31536000, immutable"
+  header / Cache-Control "no-cache"
+}

@@ -1,0 +1,26 @@
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_COOKIE_DOMAIN
+ARG VITE_DEFAULT_REDIRECT
+
+FROM oven/bun:1-alpine AS build
+WORKDIR /app
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_COOKIE_DOMAIN
+ARG VITE_DEFAULT_REDIRECT
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY \
+    VITE_COOKIE_DOMAIN=$VITE_COOKIE_DOMAIN \
+    VITE_DEFAULT_REDIRECT=$VITE_DEFAULT_REDIRECT
+COPY package.json bun.lockb* ./
+RUN bun install --frozen-lockfile
+COPY . .
+RUN bun run build
+
+FROM caddy:2-alpine AS runtime
+COPY --from=build /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
