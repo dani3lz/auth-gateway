@@ -1,8 +1,18 @@
 :80 {
   root * /srv
   encode gzip zstd
+
+  # /logout — server-side belt-and-braces cookie expiration. Runs BEFORE
+  # the SPA's JS gets a chance to call supabase.auth.signOut(); guarantees
+  # the cookie is cleared even if the browser cancels the JS run.
+  # COOKIE_DOMAIN is read at runtime from the env (set in the compose).
+  @logout path /logout
+  header @logout Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0; Secure; SameSite=Lax"
+  header @logout Cache-Control "no-store"
+
   try_files {path} {path}/ /index.html
   file_server
+
   header /assets/* Cache-Control "public, max-age=31536000, immutable"
   header / Cache-Control "no-cache"
 }

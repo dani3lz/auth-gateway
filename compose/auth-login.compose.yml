@@ -10,6 +10,8 @@ services:
     image: auth-gateway-login:local
     environment:
       - SERVICE_FQDN_LOGIN_80=https://${AUTH_HOST}
+      # Read at runtime by Caddy to inject Set-Cookie expiration on /logout.
+      - COOKIE_DOMAIN=.${PARENT_DOMAIN}
     expose:
       - '80'
     healthcheck:
