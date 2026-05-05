@@ -12,6 +12,8 @@ services:
       - SERVICE_FQDN_LOGIN_80=https://${AUTH_HOST}
       # Read at runtime by Caddy to inject Set-Cookie expiration on /logout.
       - COOKIE_DOMAIN=.${PARENT_DOMAIN}
+      # Where the Caddy /logout redirect sends the user (cachebuster appended).
+      - LOGOUT_REDIRECT=https://${SB_HOST}/
     expose:
       - '80'
     healthcheck:

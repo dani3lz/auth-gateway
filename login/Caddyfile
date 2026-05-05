@@ -1,14 +1,23 @@
+{
+  # Allow setting Set-Cookie multiple times with different attribute combos
+  # (Caddy ≥2.6 does this with the `>` operator).
+}
+
 :80 {
   root * /srv
   encode gzip zstd
 
-  # /logout — server-side belt-and-braces cookie expiration. Runs BEFORE
-  # the SPA's JS gets a chance to call supabase.auth.signOut(); guarantees
-  # the cookie is cleared even if the browser cancels the JS run.
-  # COOKIE_DOMAIN is read at runtime from the env (set in the compose).
+  # /logout — pure HTTP redirect with explicit cookie expiration headers.
+  # No SPA, no JS — atomic clear at the proxy layer.
+  # Fires three Set-Cookie headers covering every plausible attribute combo.
+  # Cachebusting query param on destination forces traefik forward-auth to
+  # re-evaluate (browsers won't reuse a cached 200 for a different URL).
   @logout path /logout
-  header @logout Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0; Secure; SameSite=Lax"
+  header @logout +Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0; Secure; SameSite=Lax"
+  header @logout +Set-Cookie "sb-access-token=; Path=/; Max-Age=0; Secure; SameSite=Lax"
+  header @logout +Set-Cookie "sb-access-token=; Domain={$COOKIE_DOMAIN}; Path=/; Max-Age=0"
   header @logout Cache-Control "no-store"
+  redir @logout {$LOGOUT_REDIRECT}?_logged_out=1 302
 
   try_files {path} {path}/ /index.html
   file_server
