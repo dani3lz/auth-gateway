@@ -74,9 +74,16 @@ export function Login() {
               },
             },
           }}
-          providers={[]}
+          providers={["google"]}
+          onlyThirdPartyProviders={true}
           theme="dark"
-          showLinks={true}
+          showLinks={false}
+          redirectTo={
+            // After Google OAuth, return to the same /auth/ page (with rd preserved
+            // if present) so onAuthStateChange("SIGNED_IN") fires and we redirect
+            // to the protected app.
+            window.location.origin + window.location.pathname + window.location.search
+          }
         />
       </div>
     </div>
