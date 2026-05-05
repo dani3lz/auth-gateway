@@ -364,11 +364,18 @@ fi
 # ---------------------------------------------------------------------------
 # 6. Wire forward-auth onto supabase-studio
 # ---------------------------------------------------------------------------
+# Edit the DB-stored docker_compose_raw rather than the on-disk compose,
+# because Coolify regenerates the on-disk file from the DB on every deploy
+# (so any patch we'd make to /data/coolify/services/.../docker-compose.yml
+# survives only until the next redeploy and silently disables the auth gate).
 log "Step 6/7: Wire forward-auth onto supabase-studio"
-python3 - "$SUPA_UUID" "$VAL_UUID" <<'PY'
+TMP_COMPOSE="$(mktemp)"
+docker exec coolify-db psql -U coolify -d coolify -t -A \
+  -c "SELECT docker_compose_raw FROM services WHERE uuid='$SUPA_UUID';" \
+  > "$TMP_COMPOSE"
+python3 - "$SUPA_UUID" "$VAL_UUID" "$TMP_COMPOSE" <<'PY'
 import sys, yaml
-SUPA, VAL = sys.argv[1], sys.argv[2]
-path = f"/data/coolify/services/{SUPA}/docker-compose.yml"
+SUPA, VAL, path = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path) as f: d = yaml.safe_load(f)
 studio = d['services']['supabase-studio']
 labels = studio.get('labels', {})
@@ -386,8 +393,13 @@ labels[f'traefik.http.routers.https-0-{SUPA}-supabase-studio.middlewares'] = 'gz
 studio['labels'] = labels
 with open(path, 'w') as f: yaml.safe_dump(d, f, default_flow_style=False, sort_keys=False, width=999)
 PY
+docker cp "$TMP_COMPOSE" coolify-db:/tmp/supa-compose.yml
+docker exec coolify-db psql -U coolify -d coolify -c \
+  "UPDATE services SET docker_compose_raw = pg_read_file('/tmp/supa-compose.yml') WHERE uuid='$SUPA_UUID';" \
+  >/dev/null
+rm -f "$TMP_COMPOSE"
 deploy "$SUPA_UUID"
-ok "Forward-auth wired"
+ok "Forward-auth wired (persisted to Coolify DB)"
 
 # ---------------------------------------------------------------------------
 # 7. Reload traefik so it picks up the new networks/labels
