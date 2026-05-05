@@ -25,7 +25,9 @@ ENV_FILE="${ENV_FILE:-$REPO_DIR/.env}"
 set -a; source "$ENV_FILE"; set +a
 
 : "${COOLIFY_URL:?}" "${COOLIFY_TOKEN:?}" "${PROJECT_UUID:?}" "${SERVER_UUID:?}"
-: "${PARENT_DOMAIN:?}" "${SB_HOST:?}" "${API_HOST:?}" "${AUTH_HOST:?}" "${AUTH_VERIFY_HOST:?}"
+: "${PARENT_DOMAIN:?}" "${SB_HOST:?}" "${API_HOST:?}" "${AUTH_VERIFY_HOST:?}"
+# AUTH_HOST is legacy (subdomain mode). Path-based deploys leave it empty.
+AUTH_HOST="${AUTH_HOST:-}"
 : "${S3_HOST:?}" "${MINIO_CONSOLE_HOST:?}"
 : "${SMTP_HOST:?}" "${SMTP_PORT:?}" "${SMTP_USER:?}" "${SMTP_PASS:?}"
 
