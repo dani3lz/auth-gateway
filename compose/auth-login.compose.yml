@@ -2,7 +2,7 @@ services:
   login:
     image: 'auth-gateway-login:local'
     environment:
-      - COOKIE_DOMAIN=
+      - COOKIE_DOMAIN=.${PARENT_DOMAIN}
       - 'LOGOUT_REDIRECT=https://${SB_HOST}/'
     expose:
       - '80'
