@@ -15,6 +15,9 @@ services:
       - LOGIN_URL=https://${SB_HOST}/auth
       - COOKIE_NAME=sb-access-token
       - PORT=8080
+      # Workspace owner email — only this user may DELETE through Studio's
+      # Authentication > Users tab. Empty = no per-user delete restriction.
+      - OWNER_EMAIL=${OWNER_EMAIL}
     expose:
       - '8080'
     healthcheck:

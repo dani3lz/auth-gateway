@@ -32,6 +32,8 @@ AUTH_HOST="${AUTH_HOST:-}"
 : "${SMTP_HOST:?}" "${SMTP_PORT:?}" "${SMTP_USER:?}" "${SMTP_PASS:?}"
 : "${GOOGLE_CLIENT_ID:?}" "${GOOGLE_CLIENT_SECRET:?}"
 GOOGLE_REDIRECT_URI="${GOOGLE_REDIRECT_URI:-https://$API_HOST/auth/v1/callback}"
+# Owner email is optional — empty = no per-user delete restriction.
+OWNER_EMAIL="${OWNER_EMAIL:-}"
 
 API="$COOLIFY_URL/api/v1"
 AUTH=(-H "Authorization: Bearer $COOLIFY_TOKEN" -H "Content-Type: application/json")
@@ -315,7 +317,7 @@ ok "validator image ready"
 
 VAL_UUID="$(service_uuid_by_name auth-validator || true)"
 if [ -z "$VAL_UUID" ]; then
-  export AUTH_VERIFY_HOST SB_HOST SUPABASE_JWT_SECRET="$JWT_SECRET"
+  export AUTH_VERIFY_HOST SB_HOST SUPABASE_JWT_SECRET="$JWT_SECRET" OWNER_EMAIL
   COMPOSE_B64="$(render "$REPO_DIR/compose/auth-validator.compose.yml" | b64)"
   resp=$(curl -s -X POST "${AUTH[@]}" "$API/services" -d @- <<JSON
 { "project_uuid":"$PROJECT_UUID","server_uuid":"$SERVER_UUID","environment_name":"production",

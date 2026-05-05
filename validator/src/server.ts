@@ -10,6 +10,7 @@ app.all("/verify", async (c) => {
   const SECRET = process.env.SUPABASE_JWT_SECRET || "";
   const LOGIN_URL = process.env.LOGIN_URL || "";
   const COOKIE_NAME = process.env.COOKIE_NAME || "sb-access-token";
+  const OWNER_EMAIL = (process.env.OWNER_EMAIL || "").toLowerCase();
 
   const cookies = parseCookies(c.req.header("cookie"));
   // supabase-js stores the entire session as a JSON object under the cookie:
@@ -64,6 +65,25 @@ app.all("/verify", async (c) => {
   if (!token) return buildResponse();
   const result = await verifyJwt(token, SECRET);
   if (!result.ok) return buildResponse();
+
+  const email = String(result.claims.email ?? "").toLowerCase();
+
+  // Owner-only guard for Studio's "delete user" button. Studio's
+  // Authentication > Users tab calls DELETE /api/platform/auth/[ref]/users/[id]
+  // — block it for everyone except OWNER_EMAIL so invited teammates can't
+  // (accidentally or otherwise) delete each other or themselves through the
+  // UI. NB: this does not protect the SQL editor — anyone with Studio access
+  // can still run `DELETE FROM auth.users` as superuser.
+  if (OWNER_EMAIL) {
+    const method = (c.req.header("x-forwarded-method") || "").toUpperCase();
+    const path = (c.req.header("x-forwarded-uri") || "").split("?")[0];
+    const isUserDelete =
+      method === "DELETE" &&
+      /^\/api\/platform\/auth\/[^/]+\/users(\/|$)/.test(path);
+    if (isUserDelete && email !== OWNER_EMAIL) {
+      return c.text("Only the workspace owner may delete users.", 403);
+    }
+  }
 
   c.header("X-User-Id", String(result.claims.sub ?? ""));
   c.header("X-User-Email", String(result.claims.email ?? ""));
