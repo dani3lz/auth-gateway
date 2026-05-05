@@ -10,9 +10,22 @@ const DEFAULT_REDIRECT = (import.meta.env.VITE_DEFAULT_REDIRECT as string) || "/
 // path-based deployment this should remain empty.
 const PARENT_DOMAIN = (import.meta.env.VITE_PARENT_DOMAIN as string) || "";
 
+// Stash rd in sessionStorage when the page first loads so we don't have to
+// pass it through the OAuth round-trip. Some Supabase configurations reject
+// or strip redirect URLs that have their own query strings.
+function stashRd() {
+  const rd = new URLSearchParams(window.location.search).get("rd");
+  if (rd) {
+    try { sessionStorage.setItem("auth-gateway-rd", rd); } catch { /* ignore */ }
+  }
+}
+stashRd();
+
 function getRedirect(): string {
-  const params = new URLSearchParams(window.location.search);
-  const rd = params.get("rd");
+  let rd = new URLSearchParams(window.location.search).get("rd");
+  if (!rd) {
+    try { rd = sessionStorage.getItem("auth-gateway-rd"); } catch { /* ignore */ }
+  }
   if (!rd) return DEFAULT_REDIRECT;
   // Same-origin paths ("/...") are always safe.
   if (rd.startsWith("/") && !rd.startsWith("//")) return rd;
@@ -34,13 +47,47 @@ export function Login() {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // eslint-disable-next-line no-console
+    console.log("[auth] mount", { url: window.location.href, hash: window.location.hash, search: window.location.search });
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      // eslint-disable-next-line no-console
+      console.log("[auth] getSession result:", { session: !!session, error });
       if (!mounted) return;
-      if (session) window.location.replace(getRedirect());
-      else setReady(true);
+      if (session) {
+        // eslint-disable-next-line no-console
+        console.log("[auth] redirecting to:", getRedirect());
+        window.location.replace(getRedirect());
+      } else {
+        setReady(true);
+      }
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") window.location.replace(getRedirect());
+    const writeCookie = (session: { access_token?: string; expires_at?: number } | null) => {
+      if (!session?.access_token) return;
+      // Store only the JWT (the validator's only need). The full session is
+      // in localStorage via supabase-js. This avoids the 4KB cookie size cap
+      // — a Google OAuth session JSON balloons past 4KB once URL-encoded.
+      const expires = typeof session.expires_at === "number"
+        ? `Expires=${new Date(session.expires_at * 1000).toUTCString()}`
+        : "Max-Age=2592000";
+      const parts = [
+        "sb-access-token=" + encodeURIComponent(session.access_token),
+        "Path=/",
+        "SameSite=Lax",
+        "Secure",
+        expires,
+      ];
+      document.cookie = parts.join("; ");
+      // eslint-disable-next-line no-console
+      console.log("[auth] cookie written, size:", session.access_token.length, "bytes; ok?", document.cookie.includes("sb-access-token"));
+    };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // eslint-disable-next-line no-console
+      console.log("[auth] onAuthStateChange:", event, "session?", !!session);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        writeCookie(session);
+        if (event === "SIGNED_IN") window.location.replace(getRedirect());
+      }
     });
     return () => {
       mounted = false;
@@ -79,10 +126,10 @@ export function Login() {
           theme="dark"
           showLinks={false}
           redirectTo={
-            // After Google OAuth, return to the same /auth/ page (with rd preserved
-            // if present) so onAuthStateChange("SIGNED_IN") fires and we redirect
-            // to the protected app.
-            window.location.origin + window.location.pathname + window.location.search
+            // Plain origin+path (no query) — Supabase's URI allow-list/glob
+            // matching is finicky with query strings. rd is stashed in
+            // sessionStorage by stashRd() before this render.
+            window.location.origin + window.location.pathname
           }
         />
       </div>
