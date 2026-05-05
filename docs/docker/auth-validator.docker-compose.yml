@@ -1,0 +1,67 @@
+services:
+  validator:
+    image: auth-gateway-validator:local
+    environment:
+      SUPABASE_JWT_SECRET: R2WtZRfjOlIWV6nmNxdPXZp6h6tboI9y
+      LOGIN_URL: https://auth.sb.soltrix.dev
+      COOKIE_NAME: sb-access-token
+      PORT: '8080'
+      COOLIFY_RESOURCE_UUID: k4k8gscs48o4ws0cw0k44g0s
+      COOLIFY_CONTAINER_NAME: validator-k4k8gscs48o4ws0cw0k44g0s
+      COOLIFY_FQDN: auth-verify.sb.soltrix.dev
+      COOLIFY_URL: https://auth-verify.sb.soltrix.dev
+      SERVICE_NAME_VALIDATOR: validator
+    expose:
+    - '8080'
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -qO- http://127.0.0.1:8080/healthz | grep -q ok
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    container_name: validator-k4k8gscs48o4ws0cw0k44g0s
+    restart: unless-stopped
+    labels:
+      coolify.managed: 'true'
+      coolify.version: 4.0.0-beta.444
+      coolify.serviceId: '20'
+      coolify.type: service
+      coolify.name: validator-k4k8gscs48o4ws0cw0k44g0s
+      coolify.resourceName: auth-validator
+      coolify.projectName: test
+      coolify.serviceName: validator
+      coolify.environmentName: production
+      coolify.pullRequestId: '0'
+      coolify.service.subId: '48'
+      coolify.service.subType: application
+      coolify.service.subName: validator
+      traefik.enable: 'true'
+      traefik.http.middlewares.gzip.compress: 'true'
+      traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
+      traefik.http.routers.http-0-k4k8gscs48o4ws0cw0k44g0s-validator.entryPoints: http
+      traefik.http.routers.http-0-k4k8gscs48o4ws0cw0k44g0s-validator.middlewares: redirect-to-https
+      traefik.http.routers.http-0-k4k8gscs48o4ws0cw0k44g0s-validator.rule: Host(`auth-verify.sb.soltrix.dev`) && PathPrefix(`/`)
+      traefik.http.routers.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.entryPoints: https
+      traefik.http.routers.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.middlewares: gzip
+      traefik.http.routers.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.rule: Host(`auth-verify.sb.soltrix.dev`) && PathPrefix(`/`)
+      traefik.http.routers.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.tls.certresolver: letsencrypt
+      traefik.http.routers.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.tls: 'true'
+      caddy_0.encode: zstd gzip
+      caddy_0.handle_path.0_reverse_proxy: '{{upstreams}}'
+      caddy_0.handle_path: /*
+      caddy_0.header: -Server
+      caddy_0.try_files: '{path} /index.html /index.php'
+      caddy_0: https://auth-verify.sb.soltrix.dev
+      caddy_ingress_network: k4k8gscs48o4ws0cw0k44g0s
+      traefik.http.services.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.loadbalancer.server.port: '8080'
+      traefik.http.routers.https-0-k4k8gscs48o4ws0cw0k44g0s-validator.service: https-0-k4k8gscs48o4ws0cw0k44g0s-validator
+      traefik.http.routers.http-0-k4k8gscs48o4ws0cw0k44g0s-validator.service: https-0-k4k8gscs48o4ws0cw0k44g0s-validator
+    networks:
+      k4k8gscs48o4ws0cw0k44g0s: null
+    env_file:
+    - .env
+networks:
+  k4k8gscs48o4ws0cw0k44g0s:
+    name: k4k8gscs48o4ws0cw0k44g0s
+    external: true

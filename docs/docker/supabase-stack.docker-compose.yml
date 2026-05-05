@@ -49,8 +49,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -151,8 +149,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -181,10 +177,10 @@ services:
       traefik.http.middlewares.gzip.compress: 'true'
       traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: https
       traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.entryPoints: http
-      traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.middlewares: redirect-to-https,authentik
+      traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.middlewares: redirect-to-https,auth-gateway
       traefik.http.routers.http-0-acg480k0ogok4480wgks0k4w-supabase-studio.rule: Host(`sb.soltrix.dev`) && PathPrefix(`/`)
       traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.entryPoints: https
-      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.middlewares: gzip,authentik
+      traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.middlewares: gzip,auth-gateway
       traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.rule: Host(`sb.soltrix.dev`) && PathPrefix(`/`)
       traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.tls.certresolver: letsencrypt
       traefik.http.routers.https-0-acg480k0ogok4480wgks0k4w-supabase-studio.tls: 'true'
@@ -195,9 +191,9 @@ services:
       caddy_0.try_files: '{path} /index.html /index.php'
       caddy_0: https://sb.soltrix.dev
       caddy_ingress_network: acg480k0ogok4480wgks0k4w
-      traefik.http.middlewares.authentik.forwardauth.address: http://authentik-server-asc44o0ss8kgoo44gso04ggo:9000/outpost.goauthentik.io/auth/traefik
-      traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: 'true'
-      traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
+      traefik.http.middlewares.auth-gateway.forwardauth.address: http://validator-k4k8gscs48o4ws0cw0k44g0s:8080/verify
+      traefik.http.middlewares.auth-gateway.forwardauth.trustForwardHeader: 'true'
+      traefik.http.middlewares.auth-gateway.forwardauth.authResponseHeaders: X-User-Id,X-User-Email,X-User-Role
     networks:
       acg480k0ogok4480wgks0k4w: null
     env_file:
@@ -236,8 +232,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -290,8 +284,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -344,8 +336,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -452,8 +442,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -531,8 +519,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -618,8 +604,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -672,8 +656,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -723,8 +705,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -780,8 +760,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta
@@ -863,8 +841,6 @@ services:
       SERVICE_NAME_SUPABASE_REST: supabase-rest
       SERVICE_NAME_SUPABASE_AUTH: supabase-auth
       SERVICE_NAME_REALTIME_DEV: realtime-dev
-      SERVICE_NAME_SUPABASE_MINIO: supabase-minio
-      SERVICE_NAME_MINIO_CREATEBUCKET: minio-createbucket
       SERVICE_NAME_SUPABASE_STORAGE: supabase-storage
       SERVICE_NAME_IMGPROXY: imgproxy
       SERVICE_NAME_SUPABASE_META: supabase-meta

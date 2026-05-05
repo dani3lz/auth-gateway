@@ -87,46 +87,39 @@ Stored Vault entries (15 total — query with `select name, decrypted_secret fro
 14 containers (1 supabase-db removed, see the bundled minio + 13 service containers):
 `supabase-kong`, `supabase-studio`, `supabase-analytics`, `supabase-vector`, `supabase-rest`, `supabase-auth`, `realtime-dev`, `supabase-minio`, `minio-createbucket`, `supabase-storage`, `imgproxy`, `supabase-meta`, `supabase-edge-functions`, `supabase-supavisor`.
 
-### Authentik (forward-auth in front of Studio)
+### Auth Gateway (forward-auth in front of Studio)
 
-- Service UUID: `asc44o0ss8kgoo44gso04ggo`
-- Containers: `authentik-server`, `authentik-worker`, `postgresql` (Authentik's own Postgres, separate from Supabase's)
-- Image: `ghcr.io/goauthentik/server:2025.10.3`
-- Public host: `https://auth.sb.soltrix.dev` (modern OAuth-based UI)
-- Admin user: `akadmin` (set during initial setup wizard) — **password is NOT in Vault; only the user knows it. Add via `vault.create_secret(...)` if you want a copy.**
-- SMTP: configured (`smtp.hostinger.com:587 STARTTLS` via `daniel@soltrix.dev`) — password resets work
-- Branding: title = "Soltrix", logo = Supabase's, custom CSS (Inter font, dark `#181818`, `#3ECF8E` accent — supabase-dashboard look). Apply tweaks via Admin → System → Brands.
-- Outpost embedded: `authentik_host = https://auth.sb.soltrix.dev` (set via API on the `authentik Embedded Outpost` config).
-- **Direct-access guard:** the bare `https://auth.sb.soltrix.dev/` URL redirects to `https://sb.soltrix.dev/` (traefik `redirectregex` middleware on the auth router). All OAuth/flow paths (`/application/o/*`, `/if/flow/*`, `/static/*`, `/outpost.goauthentik.io/*`, `/api/*`, `/-/*`) remain accessible — required for the OAuth flow and for the embedded outpost callbacks.
-- Compose snapshot: `docs/docker/authentik.docker-compose.yml`
+Replaces Authentik. Code in this repo (`/login`, `/validator`).
+
+- **Login app** at `https://auth.sb.soltrix.dev` — Vite + React + `@supabase/auth-ui-react` (the Supabase dashboard auth component verbatim, so the login page is pixel-identical to supabase.com). Validates the `?rd=` query param is a `*.soltrix.dev` URL before redirecting after `SIGNED_IN`. Bare root `/` is redirected to `sb.soltrix.dev` by a traefik `redirectregex` middleware.
+- **Validator** at `https://auth-verify.sb.soltrix.dev/verify` — Hono on Bun (`/healthz` for liveness). Reads `sb-access-token` cookie, validates JWT (HS256) against the shared `SUPABASE_JWT_SECRET`. On success returns 200 with `X-User-Id` / `X-User-Email` / `X-User-Role`. On failure returns 302 to `auth.sb.soltrix.dev/?rd=<original_url>` (built from `X-Forwarded-Host` + `X-Forwarded-Uri`).
+- **Cookie scoping:** the login app uses a custom `CookieStorage` adapter (replaces supabase-js' default localStorage) that writes the JWT to a cookie scoped to `Domain=.soltrix.dev`. That parent-domain scope is what lets the validator read the JWT when traefik forward-auths a request hitting `sb.soltrix.dev`.
+- **Source repo:** https://github.com/dani3lz/auth-gateway (private). `docs/RECREATE.md` walks through fresh-VPS bootstrap.
 
 **Auth flow for Studio:**
-- `sb.soltrix.dev` → traefik forwardauth middleware → embedded Outpost on `authentik-server:9000` → if no session, 302 to `auth.sb.soltrix.dev/application/o/authorize/...` (OAuth) → after login, callback to `sb.soltrix.dev/outpost.goauthentik.io/callback` → cookie set → Studio.
-- The `/outpost.goauthentik.io/*` path on `sb.soltrix.dev` is routed (by a label on the authentik-server container) back to authentik-server itself — that's the OAuth callback handler.
+1. Browser → `sb.soltrix.dev/` → traefik calls validator → no cookie → 302 to `auth.sb.soltrix.dev/?rd=https%3A%2F%2Fsb.soltrix.dev%2F`
+2. Login app reads `rd=`, presents Supabase Auth UI; user signs in
+3. supabase-js calls Supabase Auth API at `api.sb.soltrix.dev/auth/v1/token` → JWT issued
+4. `CookieStorage` writes `sb-access-token` cookie with `Domain=.soltrix.dev`
+5. App's `onAuthStateChange("SIGNED_IN")` does `window.location.replace(rd)` → back to Studio
+6. This time validator reads the cookie, JWT signature matches → 200 → Studio loads
 
-**To protect another app:**
-1. In Authentik admin: **Applications → Create with Provider** → Proxy Provider → "Forward auth (single application)" → External host = `https://yourapp.soltrix.dev`.
-2. In **Outposts → authentik Embedded Outpost**, add the new application to its providers list.
-3. On the target container, add labels:
-   ```yaml
-   labels:
-     - 'traefik.http.middlewares.authentik.forwardauth.address=http://authentik-server-asc44o0ss8kgoo44gso04ggo:9000/outpost.goauthentik.io/auth/traefik'
-     - 'traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true'
-     - 'traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version'
-     - 'traefik.http.routers.https-0-<svc_uuid>-<svc_name>.middlewares=gzip,authentik'
-   ```
-4. On the **authentik-server** container compose labels, add the OAuth callback PathPrefix router for the new host:
-   ```yaml
-   - 'traefik.http.routers.outpost-<appname>.rule=Host(`yourapp.soltrix.dev`) && PathPrefix(`/outpost.goauthentik.io/`)'
-   - 'traefik.http.routers.outpost-<appname>.entryPoints=https'
-   - 'traefik.http.routers.outpost-<appname>.tls=true'
-   - 'traefik.http.routers.outpost-<appname>.tls.certresolver=letsencrypt'
-   - 'traefik.http.routers.outpost-<appname>.service=https-0-asc44o0ss8kgoo44gso04ggo-authentik-server'
-   ```
-5. Ensure `coolify-proxy` is connected to both networks: `docker network connect <app_net> coolify-proxy && docker network connect asc44o0ss8kgoo44gso04ggo coolify-proxy`.
-6. Restart the proxy: `docker restart coolify-proxy`.
+**To protect another app behind the same login:**
+On the target service's container compose labels, add:
+```yaml
+labels:
+  - 'traefik.http.middlewares.auth-gateway.forwardauth.address=http://validator-<validator_uuid>:8080/verify'
+  - 'traefik.http.middlewares.auth-gateway.forwardauth.trustForwardHeader=true'
+  - 'traefik.http.middlewares.auth-gateway.forwardauth.authResponseHeaders=X-User-Id,X-User-Email,X-User-Role'
+  - 'traefik.http.routers.https-0-<svc_uuid>-<svc_name>.middlewares=gzip,auth-gateway'
+```
+Then `docker network connect <validator_uuid> coolify-proxy && docker network connect <svc_uuid> coolify-proxy && docker restart coolify-proxy`.
 
-**Login by email instead of username:** Authentik admin → **Flows & Stages → Stages →** `default-authentication-identification` → set "User fields" to include both `Username` and `Email`. Save. Now users can type either at the login prompt.
+**Email vs. username login:** the login app uses Supabase Auth, which is email-based by default. No username concept.
+
+**Password reset:** the Auth UI's "Forgot password?" link calls `supabase.auth.resetPasswordForEmail(email)`, which uses the Supabase service's SMTP (Hostinger via `daniel@soltrix.dev`). Same SMTP path that confirmation emails use.
+
+**No need for Authentik anymore** — see "Authentik (decommissioned)" section below for the historical reference.
 
 **Critical Coolify quirk:** for custom-compose services, you MUST use the env var pattern `SERVICE_FQDN_<SERVICENAME>_<PORT>=https://<host>` in the compose's `environment:` for Coolify to wire traefik routing correctly. Without the `_<PORT>` suffix, Coolify generates router labels but no `loadbalancer.server.port`, and traefik returns 503 "no available server".
 
