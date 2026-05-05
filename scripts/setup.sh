@@ -277,6 +277,12 @@ docker exec "$PG_UUID" psql -U supabase_admin -d postgres -tc "SELECT 1 FROM pg_
   ok "Postgres bootstrapped"
 }
 
+# protect-users trigger: idempotent, run on every setup invocation so an
+# upgrade pulls in the latest version of the trigger. The auth schema is
+# created by gotrue on first boot, so this must come AFTER the supabase
+# stack has run once. We re-apply it later (step 6b) to be safe.
+docker cp "$REPO_DIR/scripts/postgres-init/protect-users.sql" "$PG_UUID:/tmp/protect-users.sql" 2>/dev/null || true
+
 # Strip the bundled supabase-db + supabase-minio + minio-createbucket from the
 # Supabase compose so the stack uses our standalone Postgres + MinIO.
 log "Stripping bundled supabase-db, supabase-minio, minio-createbucket"
@@ -425,6 +431,22 @@ docker exec coolify-db psql -U coolify -d coolify -c \
 rm -f "$TMP_COMPOSE"
 deploy "$SUPA_UUID"
 ok "Forward-auth wired (persisted to Coolify DB)"
+
+# Apply the protect-users trigger now that auth.users exists (gotrue
+# creates the schema on first boot of the supabase stack above).
+log "Step 6b/7: Install auth.users protection trigger"
+until docker exec "$PG_UUID" psql -U supabase_admin -d postgres -tc \
+  "SELECT 1 FROM information_schema.tables WHERE table_schema='auth' AND table_name='users'" \
+  | grep -q 1; do sleep 2; done
+docker exec "$PG_UUID" psql -U supabase_admin -d postgres -f /tmp/protect-users.sql >/dev/null
+# Mark OWNER_EMAIL as protected so SQL DELETE / DROP-USER paths can't remove them.
+if [ -n "$OWNER_EMAIL" ]; then
+  docker exec "$PG_UUID" psql -U supabase_admin -d postgres -c "
+    UPDATE auth.users
+    SET raw_app_meta_data = COALESCE(raw_app_meta_data,'{}'::jsonb) || '{\"is_protected\":true}'::jsonb
+    WHERE email = '$OWNER_EMAIL';" >/dev/null
+fi
+ok "Protect-users trigger installed"
 
 # ---------------------------------------------------------------------------
 # 7. Reload traefik so it picks up the new networks/labels

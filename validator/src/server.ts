@@ -68,20 +68,23 @@ app.all("/verify", async (c) => {
 
   const email = String(result.claims.email ?? "").toLowerCase();
 
-  // Owner-only guard for Studio's "delete user" button. Studio's
-  // Authentication > Users tab calls DELETE /api/platform/auth/[ref]/users/[id]
-  // — block it for everyone except OWNER_EMAIL so invited teammates can't
-  // (accidentally or otherwise) delete each other or themselves through the
-  // UI. NB: this does not protect the SQL editor — anyone with Studio access
-  // can still run `DELETE FROM auth.users` as superuser.
+  // Owner-only guard for Studio's per-user write actions in the
+  // Authentication > Users tab — delete, ban, unban, edit, etc. They all
+  // go through /api/platform/auth/[ref]/users/[id]... with a mutating verb
+  // (DELETE / PATCH / PUT / POST). Block them for everyone except
+  // OWNER_EMAIL so invited teammates can't lock each other (or the owner)
+  // out through the UI. Reads (GET) and the collection-level POST that
+  // Studio uses to invite new users are still allowed.
+  // NB: this is a UI-button guard, not a security boundary — Studio's
+  // SQL editor runs as superuser and can still mutate auth.users directly.
   if (OWNER_EMAIL) {
     const method = (c.req.header("x-forwarded-method") || "").toUpperCase();
     const path = (c.req.header("x-forwarded-uri") || "").split("?")[0];
-    const isUserDelete =
-      method === "DELETE" &&
-      /^\/api\/platform\/auth\/[^/]+\/users(\/|$)/.test(path);
-    if (isUserDelete && email !== OWNER_EMAIL) {
-      return c.text("Only the workspace owner may delete users.", 403);
+    const isPerUserMutation =
+      ["DELETE", "PATCH", "PUT", "POST"].includes(method) &&
+      /^\/api\/platform\/auth\/[^/]+\/users\/[^/]+/.test(path);
+    if (isPerUserMutation && email !== OWNER_EMAIL) {
+      return c.text("Only the workspace owner may modify users.", 403);
     }
   }
 
