@@ -255,6 +255,13 @@ docker volume ls | grep -E 'minio|postgres'   # remove if you want a clean slate
   If a service returns 503 with the message "no available server", the fix
   is usually to add `traefik.http.services.<router>.loadbalancer.server.port=<port>`
   to the labels manually. The script does this for the validator and login.
+- **Studio's Authentication → Sign In / Providers, OAuth Apps, and API Keys
+  tabs spin forever on self-host.** Studio's frontend renders them but the
+  `/api/platform/projects/[ref]/config/auth` (and sibling) Next.js routes
+  ship Cloud-only — they 404 in self-host. Configure providers via the
+  `GOTRUE_EXTERNAL_*` env vars in `.env` (the script wires Google by
+  default); the **Authentication → Users** tab still works because it
+  talks to gotrue's admin API through Kong, not through `/api/platform`.
 
 ## License
 
