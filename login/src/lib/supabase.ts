@@ -18,5 +18,10 @@ export const supabase = createClient(url, anonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Implicit flow: Supabase returns the access_token in the URL fragment
+    // directly, no code-exchange round-trip. PKCE was failing because the
+    // code-verifier cookie set on /auth/* during signInWithOAuth wasn't
+    // reliably retrievable on the OAuth callback URL.
+    flowType: "implicit",
   },
 });
