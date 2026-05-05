@@ -199,7 +199,13 @@ patch_env "$SUPA_UUID" POSTGRES_PORT                    "5432"
 patch_env "$SUPA_UUID" STORAGE_S3_ENDPOINT              "http://minio-$MINIO_UUID:9000"
 patch_env "$SUPA_UUID" API_EXTERNAL_URL                 "https://$API_HOST"
 patch_env "$SUPA_UUID" SUPABASE_PUBLIC_URL              "https://$API_HOST"
-patch_env "$SUPA_UUID" GOTRUE_SITE_URL                  "https://$SB_HOST"
+# Path-based deployment: invite/recovery emails should redirect to /auth/
+# (the login page) which knows how to parse the auth fragment. Setting
+# this to the bare host triggers the forward-auth bounce, which strips the
+# fragment and breaks the invite click-through flow.
+patch_env "$SUPA_UUID" GOTRUE_SITE_URL                  "https://$SB_HOST/auth/"
+patch_env "$SUPA_UUID" DISABLE_SIGNUP                   "true"
+patch_env "$SUPA_UUID" ENABLE_EMAIL_SIGNUP              "false"
 patch_env "$SUPA_UUID" SMTP_HOST                        "$SMTP_HOST"
 patch_env "$SUPA_UUID" SMTP_PORT                        "$SMTP_PORT"
 patch_env "$SUPA_UUID" SMTP_USER                        "$SMTP_USER"
