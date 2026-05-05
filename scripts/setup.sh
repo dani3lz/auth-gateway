@@ -30,6 +30,8 @@ set -a; source "$ENV_FILE"; set +a
 AUTH_HOST="${AUTH_HOST:-}"
 : "${S3_HOST:?}" "${MINIO_CONSOLE_HOST:?}"
 : "${SMTP_HOST:?}" "${SMTP_PORT:?}" "${SMTP_USER:?}" "${SMTP_PASS:?}"
+: "${GOOGLE_CLIENT_ID:?}" "${GOOGLE_CLIENT_SECRET:?}"
+GOOGLE_REDIRECT_URI="${GOOGLE_REDIRECT_URI:-https://$API_HOST/auth/v1/callback}"
 
 API="$COOLIFY_URL/api/v1"
 AUTH=(-H "Authorization: Bearer $COOLIFY_TOKEN" -H "Content-Type: application/json")
@@ -212,6 +214,10 @@ patch_env "$SUPA_UUID" SMTP_USER                        "$SMTP_USER"
 patch_env "$SUPA_UUID" SMTP_PASS                        "$SMTP_PASS"
 patch_env "$SUPA_UUID" SMTP_ADMIN_EMAIL                 "${SMTP_ADMIN_EMAIL:-$SMTP_USER}"
 patch_env "$SUPA_UUID" SMTP_SENDER_NAME                 "${SMTP_SENDER_NAME:-Auth}"
+# Google OAuth (referenced via ${...} from the docker_compose_raw patch in step 6)
+patch_env "$SUPA_UUID" GOOGLE_CLIENT_ID                 "$GOOGLE_CLIENT_ID"
+patch_env "$SUPA_UUID" GOOGLE_CLIENT_SECRET             "$GOOGLE_CLIENT_SECRET"
+patch_env "$SUPA_UUID" GOOGLE_REDIRECT_URI              "$GOOGLE_REDIRECT_URI"
 ok "env wired"
 
 # Capture the auto-generated SUPABASE secrets before first deploy
@@ -362,13 +368,16 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Wire forward-auth onto supabase-studio
+# 6. Patch supabase-{studio,auth} in the Coolify DB compose:
+#     (a) forward-auth labels on supabase-studio
+#     (b) GOTRUE_EXTERNAL_GOOGLE_* env on supabase-auth
 # ---------------------------------------------------------------------------
-# Edit the DB-stored docker_compose_raw rather than the on-disk compose,
-# because Coolify regenerates the on-disk file from the DB on every deploy
-# (so any patch we'd make to /data/coolify/services/.../docker-compose.yml
-# survives only until the next redeploy and silently disables the auth gate).
-log "Step 6/7: Wire forward-auth onto supabase-studio"
+# Edit docker_compose_raw in Coolify's DB rather than the on-disk compose
+# under /data/coolify/services/.../docker-compose.yml — Coolify regenerates
+# the on-disk file from the DB on every deploy, so on-disk edits survive
+# only until the next redeploy (and would silently disable the auth gate
+# or the Google OAuth provider).
+log "Step 6/7: Wire forward-auth + Google OAuth into Coolify DB compose"
 TMP_COMPOSE="$(mktemp)"
 docker exec coolify-db psql -U coolify -d coolify -t -A \
   -c "SELECT docker_compose_raw FROM services WHERE uuid='$SUPA_UUID';" \
@@ -377,6 +386,8 @@ python3 - "$SUPA_UUID" "$VAL_UUID" "$TMP_COMPOSE" <<'PY'
 import sys, yaml
 SUPA, VAL, path = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path) as f: d = yaml.safe_load(f)
+
+# (a) forward-auth labels on supabase-studio
 studio = d['services']['supabase-studio']
 labels = studio.get('labels', {})
 if isinstance(labels, list):
@@ -391,6 +402,18 @@ labels['traefik.http.middlewares.auth-gateway.forwardauth.authResponseHeaders'] 
 labels[f'traefik.http.routers.http-0-{SUPA}-supabase-studio.middlewares']  = 'redirect-to-https,auth-gateway'
 labels[f'traefik.http.routers.https-0-{SUPA}-supabase-studio.middlewares'] = 'gzip,auth-gateway'
 studio['labels'] = labels
+
+# (b) Google OAuth env on supabase-auth (values resolved from env_vars table)
+auth = d['services']['supabase-auth']
+env = auth.get('environment', {})
+if isinstance(env, list):
+    env = {l.split('=',1)[0]: l.split('=',1)[1] for l in env if '=' in l}
+env['GOTRUE_EXTERNAL_GOOGLE_ENABLED']      = 'true'
+env['GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID']    = '${GOOGLE_CLIENT_ID}'
+env['GOTRUE_EXTERNAL_GOOGLE_SECRET']       = '${GOOGLE_CLIENT_SECRET}'
+env['GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI'] = '${GOOGLE_REDIRECT_URI}'
+auth['environment'] = env
+
 with open(path, 'w') as f: yaml.safe_dump(d, f, default_flow_style=False, sort_keys=False, width=999)
 PY
 docker cp "$TMP_COMPOSE" coolify-db:/tmp/supa-compose.yml
