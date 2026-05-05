@@ -17,14 +17,14 @@ describe("verifyJwt", () => {
   test("returns user claims for a valid HS256 token", async () => {
     const token = await makeToken({
       sub: "user-1",
-      email: "daniel@soltrix.dev",
+      email: "user@example.com",
       role: "authenticated",
     });
     const result = await verifyJwt(token, SECRET);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.claims.sub).toBe("user-1");
-      expect(result.claims.email).toBe("daniel@soltrix.dev");
+      expect(result.claims.email).toBe("user@example.com");
     }
   });
 

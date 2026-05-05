@@ -8,7 +8,7 @@ app.get("/healthz", (c) => c.text("ok"));
 
 app.all("/verify", async (c) => {
   const SECRET = process.env.SUPABASE_JWT_SECRET || "";
-  const LOGIN_URL = process.env.LOGIN_URL || "https://auth.sb.soltrix.dev";
+  const LOGIN_URL = process.env.LOGIN_URL || "";
   const COOKIE_NAME = process.env.COOKIE_NAME || "sb-access-token";
 
   const cookies = parseCookies(c.req.header("cookie"));
@@ -23,11 +23,11 @@ app.all("/verify", async (c) => {
     return c.redirect(url, 302);
   };
 
-  if (!token) return buildRedirect();
-  if (!SECRET) {
-    console.error("SUPABASE_JWT_SECRET is not set");
+  if (!LOGIN_URL || !SECRET) {
+    console.error("LOGIN_URL and SUPABASE_JWT_SECRET must both be set");
     return c.text("misconfigured", 500);
   }
+  if (!token) return buildRedirect();
   const result = await verifyJwt(token, SECRET);
   if (!result.ok) return buildRedirect();
 

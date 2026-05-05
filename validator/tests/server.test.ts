@@ -6,7 +6,7 @@ const SECRET = "test-secret-min-32-chars-long-aaaaaaaa";
 
 beforeAll(() => {
   process.env.SUPABASE_JWT_SECRET = SECRET;
-  process.env.LOGIN_URL = "https://auth.sb.soltrix.dev";
+  process.env.LOGIN_URL = "https://auth.example.com";
   process.env.COOKIE_NAME = "sb-access-token";
 });
 
@@ -31,12 +31,12 @@ describe("/verify", () => {
 
   test("returns 302 to LOGIN_URL when no cookie is present", async () => {
     const res = await app.request("/verify", {
-      headers: { "X-Forwarded-Host": "sb.soltrix.dev", "X-Forwarded-Uri": "/" },
+      headers: { "X-Forwarded-Host": "app.example.com", "X-Forwarded-Uri": "/" },
     });
     expect(res.status).toBe(302);
     const loc = res.headers.get("Location") || "";
-    expect(loc.startsWith("https://auth.sb.soltrix.dev/?rd=")).toBe(true);
-    expect(decodeURIComponent(loc.split("rd=")[1])).toBe("https://sb.soltrix.dev/");
+    expect(loc.startsWith("https://auth.example.com/?rd=")).toBe(true);
+    expect(decodeURIComponent(loc.split("rd=")[1])).toBe("https://app.example.com/");
   });
 
   test("returns 302 when cookie is present but token is invalid", async () => {

@@ -3,8 +3,11 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-const DEFAULT_REDIRECT =
-  (import.meta.env.VITE_DEFAULT_REDIRECT as string) || "https://sb.soltrix.dev";
+const APP_NAME = (import.meta.env.VITE_APP_NAME as string) || "Auth Gateway";
+const DEFAULT_REDIRECT = (import.meta.env.VITE_DEFAULT_REDIRECT as string) || "/";
+// Allowed parent for the `?rd=` redirect target. Set to your zone (e.g. "example.com")
+// so we only redirect to subdomains we control. If unset, only same-origin redirects pass.
+const PARENT_DOMAIN = (import.meta.env.VITE_PARENT_DOMAIN as string) || "";
 
 function getRedirect(): string {
   const params = new URLSearchParams(window.location.search);
@@ -12,8 +15,14 @@ function getRedirect(): string {
   if (!rd) return DEFAULT_REDIRECT;
   try {
     const u = new URL(rd);
-    if (u.hostname.endsWith(".soltrix.dev") || u.hostname === "soltrix.dev") return rd;
-  } catch { /* fall through */ }
+    if (u.hostname === window.location.hostname) return rd;
+    if (PARENT_DOMAIN) {
+      const dot = `.${PARENT_DOMAIN}`;
+      if (u.hostname === PARENT_DOMAIN || u.hostname.endsWith(dot)) return rd;
+    }
+  } catch {
+    /* fall through */
+  }
   return DEFAULT_REDIRECT;
 }
 
@@ -41,7 +50,7 @@ export function Login() {
   return (
     <div className="page">
       <div className="card">
-        <h1 className="title">Sign in to Soltrix</h1>
+        <h1 className="title">Sign in to {APP_NAME}</h1>
         <Auth
           supabaseClient={supabase}
           appearance={{

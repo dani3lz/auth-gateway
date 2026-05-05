@@ -3,10 +3,12 @@ import { CookieStorage } from "./cookie-storage";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-const cookieDomain = (import.meta.env.VITE_COOKIE_DOMAIN as string) || ".soltrix.dev";
+const cookieDomain = import.meta.env.VITE_COOKIE_DOMAIN as string;
 
-if (!url || !anonKey) {
-  throw new Error("VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are required");
+if (!url || !anonKey || !cookieDomain) {
+  throw new Error(
+    "VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY and VITE_COOKIE_DOMAIN are required",
+  );
 }
 
 export const supabase = createClient(url, anonKey, {

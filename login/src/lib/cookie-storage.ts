@@ -7,7 +7,7 @@ export interface CookieStorageOptions {
 
 /**
  * A `Storage`-compatible adapter that persists Supabase auth state
- * to cookies scoped to a parent domain (e.g. ".soltrix.dev"), so the
+ * to cookies scoped to a parent domain (e.g. ".example.com"), so the
  * forward-auth validator on a sibling subdomain can read the JWT.
  *
  * Note: cookies set from JS cannot be HttpOnly. We accept this trade-off
