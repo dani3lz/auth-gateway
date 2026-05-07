@@ -28,91 +28,108 @@ can sign in to any app behind the gateway.
 ```
 auth-gateway/
 ├── README.md
-├── .env.example                  # all variables setup.sh needs
+├── .env.example                  # all variables both installers need
+├── setup-coolify.sh              # installer for Coolify hosts
+├── setup-standalone.sh           # installer for plain Docker hosts
+├── teardown-coolify.sh
+├── teardown-standalone.sh
 ├── login/                        # Vite + React login page (built into a Caddy image)
-│   ├── Dockerfile
-│   ├── Caddyfile
-│   ├── package.json
-│   └── src/
 ├── validator/                    # Hono on Bun forward-auth verifier
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── src/
-│   └── tests/
-├── compose/                      # docker-compose templates used by setup.sh
-│   ├── postgres.compose.yml
-│   ├── minio.compose.yml
-│   ├── auth-validator.compose.yml
-│   └── auth-login.compose.yml
+├── compose/
+│   ├── coolify/                  # fragments setup-coolify.sh uploads via the API
+│   │   ├── auth-login.compose.yml
+│   │   ├── auth-validator.compose.yml
+│   │   ├── minio.compose.yml
+│   │   └── postgres.compose.yml
+│   └── standalone/               # one merged stack setup-standalone.sh brings up
+│       ├── docker-compose.yml
+│       ├── Caddyfile
+│       └── volumes/              # vendored config (kong.yml, vector.yml, …)
 └── scripts/
-    ├── setup.sh                  # one-shot deploy to Coolify
-    ├── teardown.sh               # destroy
     ├── pgsodium_getkey.template.sh
-    └── postgres-init/            # Supabase bootstrap SQL
+    └── postgres-init/            # Supabase bootstrap SQL (shared by both installers)
         ├── _supabase.sql
         ├── jwt.sql
         ├── logs.sql
         ├── pooler.sql
+        ├── protect-users.sql
         ├── realtime.sql
         ├── roles.sql
         └── webhooks.sql
 ```
 
-## Prerequisites
+## Pick your installer
 
-- A VPS with **Coolify v4** already installed
+Two installers in this repo, both produce the same running stack:
+
+- **`./setup-coolify.sh`** — for hosts that already have **Coolify v4**.
+  Drives Coolify's API to create the Postgres DB, MinIO, Supabase, and the
+  validator + login services, then patches Coolify's compose to add the
+  traefik forward-auth label and Google OAuth env. Reuses Coolify's
+  bundled traefik (`coolify-proxy`) for TLS.
+- **`./setup-standalone.sh`** — for plain **Docker hosts** (Docker +
+  Compose v2 only). Brings up the full stack via one
+  `compose/standalone/docker-compose.yml`, with **Caddy** as the reverse
+  proxy (auto-HTTPS via Let's Encrypt, built-in `forward_auth`).
+
+Pick by what's already on your VPS.
+
+### Common prerequisites
+
+- A domain you control with a wildcard A record (`*.example.com`) pointing
+  at the VPS public IP. The installer's reverse proxy (Coolify's traefik
+  or the standalone Caddy) negotiates Let's Encrypt certs on first request.
+- An SMTP mailbox for confirmation/recovery emails (port 587 / STARTTLS;
+  most clouds block 25/465). Many providers require the From address to
+  match the SMTP auth user — keep `SMTP_USER` and `SMTP_ADMIN_EMAIL` the
+  same.
+- `bash`, `curl`, `docker`, `openssl`, `python3` on the host.
+
+### Coolify-specific prerequisites
+
+- Coolify v4 already installed
   (`curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash`).
-- A domain you control with a wildcard A record (`*.example.com`) pointing at
-  the VPS public IP. Coolify's bundled traefik will issue Let's Encrypt certs
-  automatically.
-- An SMTP mailbox for confirmation/recovery emails. Provider note: many
-  providers require the From address to match the SMTP auth user — set
-  `SMTP_USER` and `SMTP_ADMIN_EMAIL` to the same mailbox.
 - The Coolify root API token (Coolify → Keys & Tokens → Create New Token).
-- The target Coolify project UUID and server UUID. Find them with:
+- The target Coolify project + server UUIDs. Find them with:
   ```
   curl -H "Authorization: Bearer $TOKEN" $COOLIFY_URL/api/v1/projects
   curl -H "Authorization: Bearer $TOKEN" $COOLIFY_URL/api/v1/servers
   ```
-- `bash`, `curl`, `python3`, `docker`, `openssl` on the host. (All present
-  by default on a Coolify host.)
+
+### Standalone-specific prerequisites
+
+- Docker Compose v2.
+- Ports 80 and 443 free on the host (Caddy binds them).
+- `LETSENCRYPT_EMAIL` set in `.env`.
 
 ## Deploy
 
 ```bash
-# On the Coolify host
 git clone https://github.com/<you>/auth-gateway.git
 cd auth-gateway
-
 cp .env.example .env
-$EDITOR .env                 # fill in COOLIFY_TOKEN, PROJECT_UUID, SERVER_UUID,
-                             # PARENT_DOMAIN, the *_HOST values, and SMTP creds
+$EDITOR .env       # fill in PARENT_DOMAIN, *_HOST values, SMTP creds, OAuth creds
+                   # (Coolify only: COOLIFY_TOKEN, PROJECT_UUID, SERVER_UUID)
+                   # (standalone only: LETSENCRYPT_EMAIL)
 
-./scripts/setup.sh
+# On a Coolify host:
+./setup-coolify.sh
+
+# On a plain Docker host:
+./setup-standalone.sh
 ```
 
-`setup.sh` is idempotent — re-running it skips already-existing resources.
-It will:
+Both installers are idempotent — re-running picks up code changes and
+skips already-existing resources. Generated secrets (Postgres password,
+JWT secret, anon/service-role keys, MinIO creds, etc.) are written back
+to `.env` so subsequent runs reuse them.
 
-1. Create a `supabase-postgres` database resource (Coolify-managed, with
-   backups). Generates a fresh password.
-2. Configure pgsodium for Supabase Vault and run the seven init SQL files
-   that bootstrap Supabase's roles and schemas.
-3. Create a `minio` service with public S3 + console domains. Generates a
-   fresh root user/password.
-4. Create the Supabase one-click service and re-wire its env vars to point
-   at the standalone Postgres + MinIO. Strip the bundled `supabase-db`,
-   `supabase-minio`, and `minio-createbucket` from the generated compose.
-5. Build `auth-gateway-validator:local` from `validator/`, deploy as a
-   Coolify service.
-6. Build `auth-gateway-login:local` from `login/` (with the Supabase URL
-   and anon key baked in as build args), deploy as a Coolify service.
-7. Add a traefik forward-auth middleware label to `supabase-studio` so
-   every request to `sb.example.com` is authenticated by the validator.
-8. Reload traefik.
+## Teardown
 
-All the values it generates (passwords, UUIDs, JWT secret, anon/service-role
-keys) are written back to `.env` so subsequent runs reuse them.
+```bash
+./teardown-coolify.sh                  # removes Coolify resources, keeps volumes
+./teardown-standalone.sh --yes         # docker compose down -v (DESTRUCTIVE)
+```
 
 ## Verify
 
@@ -215,23 +232,16 @@ to log the user out from everywhere.
 
 ```bash
 git pull
-./scripts/setup.sh    # idempotent — picks up code changes, rebuilds images
+./setup-coolify.sh        # or ./setup-standalone.sh
 ```
 
-The setup script rebuilds the validator and login images every run if you've
-removed them with `docker rmi`. To force a rebuild without touching anything
-else:
+Both installers are idempotent and pick up code changes. Validator and
+login images are rebuilt the next run if you've removed them with
+`docker rmi`. To force a rebuild without touching anything else:
 
 ```bash
 docker rmi auth-gateway-validator:local auth-gateway-login:local
-./scripts/setup.sh
-```
-
-## Teardown
-
-```bash
-./scripts/teardown.sh    # removes Coolify services + the database
-docker volume ls | grep -E 'minio|postgres'   # remove if you want a clean slate
+./setup-coolify.sh        # or ./setup-standalone.sh
 ```
 
 ## Caveats
