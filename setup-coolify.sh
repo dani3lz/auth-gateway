@@ -17,7 +17,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_DIR="$SCRIPT_DIR"
 
 ENV_FILE="${ENV_FILE:-$REPO_DIR/.env}"
 [ -f "$ENV_FILE" ] || { echo "Missing $ENV_FILE — copy .env.example and fill it in"; exit 1; }
@@ -160,7 +160,7 @@ MINIO_UUID="$(service_uuid_by_name minio || true)"
 if [ -z "$MINIO_UUID" ]; then
   export MINIO_ROOT_USER="${MINIO_ROOT_USER:-$(openssl rand -hex 8)}"
   export MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-$(openssl rand -hex 16)}"
-  COMPOSE_B64="$(render "$REPO_DIR/compose/minio.compose.yml" | b64)"
+  COMPOSE_B64="$(render "$REPO_DIR/compose/coolify/minio.compose.yml" | b64)"
   resp=$(curl -s -X POST "${AUTH[@]}" "$API/services" -d @- <<JSON
 { "project_uuid":"$PROJECT_UUID","server_uuid":"$SERVER_UUID","environment_name":"production",
   "name":"minio","docker_compose_raw":"$COMPOSE_B64","instant_deploy":true }
@@ -324,7 +324,7 @@ ok "validator image ready"
 VAL_UUID="$(service_uuid_by_name auth-validator || true)"
 if [ -z "$VAL_UUID" ]; then
   export AUTH_VERIFY_HOST SB_HOST SUPABASE_JWT_SECRET="$JWT_SECRET" OWNER_EMAIL
-  COMPOSE_B64="$(render "$REPO_DIR/compose/auth-validator.compose.yml" | b64)"
+  COMPOSE_B64="$(render "$REPO_DIR/compose/coolify/auth-validator.compose.yml" | b64)"
   resp=$(curl -s -X POST "${AUTH[@]}" "$API/services" -d @- <<JSON
 { "project_uuid":"$PROJECT_UUID","server_uuid":"$SERVER_UUID","environment_name":"production",
   "name":"auth-validator","docker_compose_raw":"$COMPOSE_B64","instant_deploy":true }
@@ -360,7 +360,7 @@ if [ -z "$LOGIN_UUID" ]; then
   export AUTH_HOST SB_HOST
   AUTH_HOST_REGEX="$(printf '%s' "$AUTH_HOST" | sed 's/\./\\\\./g')"
   export AUTH_HOST_REGEX
-  COMPOSE_B64="$(render "$REPO_DIR/compose/auth-login.compose.yml" | b64)"
+  COMPOSE_B64="$(render "$REPO_DIR/compose/coolify/auth-login.compose.yml" | b64)"
   resp=$(curl -s -X POST "${AUTH[@]}" "$API/services" -d @- <<JSON
 { "project_uuid":"$PROJECT_UUID","server_uuid":"$SERVER_UUID","environment_name":"production",
   "name":"auth-login","docker_compose_raw":"$COMPOSE_B64","instant_deploy":true }
