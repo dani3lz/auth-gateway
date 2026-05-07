@@ -1,0 +1,46 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+(login_routes) {
+	handle /auth* {
+		reverse_proxy login:80
+	}
+	handle /logout {
+		reverse_proxy login:80
+	}
+	handle /favicon/manifest.json {
+		reverse_proxy login:80
+	}
+	handle /api/platform/notifications* {
+		reverse_proxy login:80
+	}
+}
+
+{$SB_HOST} {
+	import login_routes
+
+	handle {
+		forward_auth validator:8080 {
+			uri /verify
+			copy_headers X-User-Id X-User-Email X-User-Role
+		}
+		reverse_proxy supabase-studio:3000
+	}
+}
+
+{$AUTH_VERIFY_HOST} {
+	reverse_proxy validator:8080
+}
+
+{$API_HOST} {
+	reverse_proxy supabase-kong:8000
+}
+
+{$S3_HOST} {
+	reverse_proxy minio:9000
+}
+
+{$MINIO_CONSOLE_HOST} {
+	reverse_proxy minio:9001
+}
