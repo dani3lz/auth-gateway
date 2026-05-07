@@ -27,7 +27,7 @@ set -a; source "$ENV_FILE"; set +a
 GOOGLE_REDIRECT_URI="${GOOGLE_REDIRECT_URI:-https://$API_HOST/auth/v1/callback}"
 SMTP_ADMIN_EMAIL="${SMTP_ADMIN_EMAIL:-$SMTP_USER}"
 SMTP_SENDER_NAME="${SMTP_SENDER_NAME:-Auth}"
-APP_NAME="${APP_NAME:-Auth Gateway}"
+APP_NAME="${APP_NAME:-Supabase}"
 OWNER_EMAIL="${OWNER_EMAIL:-}"
 
 log()  { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }

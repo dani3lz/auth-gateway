@@ -3,7 +3,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-const APP_NAME = (import.meta.env.VITE_APP_NAME as string) || "Auth Gateway";
+const APP_NAME = (import.meta.env.VITE_APP_NAME as string) || "Supabase";
 const DEFAULT_REDIRECT = (import.meta.env.VITE_DEFAULT_REDIRECT as string) || "/";
 // Allowed parent for the `?rd=` redirect target. Only used when the auth UI
 // lives on a different subdomain than the protected app — for the same-origin

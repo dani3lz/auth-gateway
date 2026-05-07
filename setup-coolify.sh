@@ -350,7 +350,7 @@ if ! docker image inspect auth-gateway-login:local >/dev/null 2>&1; then
     --build-arg "VITE_COOKIE_DOMAIN=" \
     --build-arg "VITE_DEFAULT_REDIRECT=/" \
     --build-arg "VITE_PARENT_DOMAIN=" \
-    --build-arg "VITE_APP_NAME=${APP_NAME:-Auth Gateway}" \
+    --build-arg "VITE_APP_NAME=${APP_NAME:-Supabase}" \
     -t auth-gateway-login:local "$REPO_DIR/login/" >/dev/null
 fi
 ok "login image ready"
